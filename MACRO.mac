@@ -1,0 +1,23 @@
+CLK_SET_LOW		MACRO
+		rmb4	PD
+		ENDM
+
+CLK_SET_HIGH	MACRO
+		smb4	PD
+		ENDM
+		
+SDI_SET_LOW		MACRO
+		rmb6	PD
+		ENDM
+
+SDI_SET_HIGH	MACRO
+		smb6	PD	
+		ENDM
+		
+LE_SET_LOW		MACRO
+		rmb5	PD
+		ENDM
+		
+LE_SET_HIGH		MACRO
+		smb5	PD
+		ENDM

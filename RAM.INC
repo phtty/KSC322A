@@ -16,12 +16,11 @@ Alarm_HourAddr	EQU		RamStarAddr+Alarm_Hour_Addr-Page0RamStarAddr	;闹钟组小时数据
 ;---------------------------------------------------------------------
 	ORG	0080H
 Page0RamStarAddr		EQU		$
-;LCDRAM					DS		6*6
 LED_Addr				EQU		$
-LED_Ram					DS		4*3
+LED_Ram					DS		12
 
 LED_Addr_BK				EQU		$
-LED_Ram_BK				DS		4*3
+LED_Ram_BK				DS		12
 
 R_Int_Backup			DS		1
 
@@ -37,7 +36,6 @@ Backlight_Counter		DS		1
 Return_Counter			DS		1
 Return_MaxTime			DS		1
 AlarmLoud_Counter		DS		1
-COM_Counter				DS		1
 
 Calendar_Flag			DS		1
 ;bit0 = 1 闰年
@@ -124,21 +122,15 @@ RFC_ChannelCount		DS		1
 
 RT_Div_RR_H				DS		1
 RT_Div_RR_L				DS		1
-RR_Div_RH_H				DS		1
-RR_Div_RH_L				DS		1
 RFC_TempCount_H			DS		1
 RFC_TempCount_M			DS		1
 RFC_TempCount_L			DS		1
-RFC_HumiCount_H			DS		1
-RFC_HumiCount_M			DS		1
-RFC_HumiCount_L			DS		1
 RFC_StanderCount_H		DS		1
 RFC_StanderCount_M		DS		1
 RFC_StanderCount_L		DS		1
 
 R_Temperature			DS		1
 R_Temperature_F			DS		1
-R_Humidity				DS		1
 
 R_Temper_Comp			DS		1
 R_Temper_Comp_Time		DS		1
@@ -178,7 +170,6 @@ CC0						DS		1
 
 ;---------------------------------------       
 P_Temp					DS		8
-LED_Temp				DS		5
 ;---------------------------------------
 ;---------------------------------------
 ;***************************************

@@ -330,33 +330,6 @@ Display_FahrenheitDegree:
 
 
 
-
-; 显示湿度函数
-F_Display_Humid:
-	lda		R_Humidity
-	beq		DisHumid_MinusTemper				; 温度为负时，不显示湿度
-	jsr		L_A_DecToHex
-	pha
-	and		#$0f
-	ldx		#led_d9
-	jsr		L_Dis_7Bit_DigitDot
-	pla
-	and		#$f0
-	jsr		L_LSR_4Bit
-	ldx		#led_d8
-	jsr		L_Dis_7Bit_DigitDot
-	rts
-DisHumid_MinusTemper:
-	lda		#9
-	ldx		#led_d8
-	jsr		L_Dis_7Bit_WordDot
-	lda		#9
-	ldx		#led_d9
-	jsr		L_Dis_7Bit_WordDot
-	rts
-
-
-
 F_SymbolRegulate:								; 显示常亮点
 	ldx		#led_TMP
 	jsr		F_DisSymbol

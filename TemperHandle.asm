@@ -2,7 +2,7 @@ L_Temper_Handle:
 	jsr		L_RT_Multi_256
 	jsr		L_RT_Div_RR
 	jsr		L_Search_TemperTable
-	jsr		Temper_Compen
+	jsr		Temper_Compen						; ¼ÆËãÎÂ¶È²¹³¥
 	sec
 	lda		R_Temperature
 	sbc		R_Temper_Comp

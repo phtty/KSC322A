@@ -55,16 +55,7 @@ F_RFC_Channel_Select:
 
 L_Get_RFC_Data:
 	lda		RFC_ChannelCount
-	bne		L_NoHumi
-	lda		TMR0								; PD3口取得湿度计数值
-	sta		RFC_HumiCount_L
-	lda		TMR1
-	sta		RFC_HumiCount_M
-	bra		L_Sample_Over
-L_NoHumi:
-	lda		RFC_ChannelCount
-	cmp		#01									; PD2口取得温度计数值
-	bne		L_NoTemp
+	bne		L_NoTemp							; PD2口取得温度计数值
 	lda		TMR0
 	sta		RFC_TempCount_L
 	lda		TMR1
@@ -72,7 +63,7 @@ L_NoHumi:
 	bra		L_Sample_Over
 L_NoTemp:
 	lda		RFC_ChannelCount
-	cmp		#02									; PD1口取得标准电阻计数值
+	cmp		#01									; PD1口取得标准电阻计数值
 	bne		L_Sample_Over
 	lda		TMR0
 	sta		RFC_StanderCount_L
@@ -103,18 +94,13 @@ F_RFC_MeasureStop:
 	jsr		F_Timer_NormalMode					; 定时器配置为响铃和长按状态,关闭定时器同步
 
 	jsr		L_Temper_Handle
-	jsr		L_Humid_Handle
 	jsr		F_Display_Temper					; 数据处理后，显示温度和湿度
-	jsr		F_Display_Humid
 
 L_CLR_RFC:
 	lda		#0
 	sta		RFC_TempCount_H						; 清理相关变量
 	sta		RFC_TempCount_M
 	sta		RFC_TempCount_L
-	sta		RFC_HumiCount_H
-	sta		RFC_HumiCount_M
-	sta		RFC_HumiCount_L
 	sta		RFC_StanderCount_H
 	sta		RFC_StanderCount_M
 	sta		RFC_StanderCount_L
@@ -138,6 +124,6 @@ F_RFC_Abort:
 
 
 T_RFC_Channel:
-	db		$20	; CTRT0	PD3
+	;db		$20	; CTRT0	PD3
 	db		$10	; RS0	PD2
 	db		$60	; CSRT0	PD1

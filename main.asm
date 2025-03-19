@@ -6,7 +6,7 @@ CODE_BEG	EQU		E000H							; 起始地址
 PROG		SECTION OFFSET CODE_BEG					; 定义代码段的偏移量从CODE_BEG开始，用于组织程序代码。
 .include	50Px1x.h								; 头文件
 .include	RAM.INC	
-; .include	MACRO.mac
+.include	MACRO.mac
 
 STACK_BOT		EQU		FFH							; 堆栈底部
 .PROG												; 程序开始
@@ -46,40 +46,40 @@ L_Clear_Ram_Loop:
 	cli												; 开总中断
 
 ; 上电处理
-	rmb4	IER										;  关闭按键中断避免上电过程被打扰
-	lda		#1
-	sta		Backlight_Level
-	smb0	PC										; 初始亮度设置为高亮
-	smb0	PC_IO_Backup
-
-	jsr		F_Test_Mode								; 上电显示部分
-
-	jsr		F_RFC_MeasureStart						; 上电温湿度测量
-Wait_RFC_MeasureOver:
-	jsr		F_RFC_MeasureManage
-	bbs0	RFC_Flag,Wait_RFC_MeasureOver
-
-	smb0	Timer_Flag
-	rmb1	Timer_Flag
-	jsr		F_SymbolRegulate
-	jsr		F_Time_Display
-	jsr		F_Display_Week
-
-	lda		#4										; 上电蜂鸣器响2声
-	sta		Beep_Serial
-	smb0	TMRC
-Loop_BeepTest:										; 响铃两声
-	jsr		F_Louding
-	lda		Beep_Serial
-	bne		Loop_BeepTest
-	rmb0	TMRC
-
-	lda		#0001B
-	sta		Sys_Status_Flag
-	lda		#0
-	sta		Sys_Status_Ordinal
-
-	smb4	IER										;  上电显示完成，重新开启按键中断
+; 	rmb4	IER										;  关闭按键中断避免上电过程被打扰
+; 	lda		#1
+; 	sta		Backlight_Level
+; 	smb0	PC										; 初始亮度设置为高亮
+; 	smb0	PC_IO_Backup
+; 
+; 	jsr		F_Test_Mode								; 上电显示部分
+; 
+; 	jsr		F_RFC_MeasureStart						; 上电温湿度测量
+; Wait_RFC_MeasureOver:
+; 	jsr		F_RFC_MeasureManage
+; 	bbs0	RFC_Flag,Wait_RFC_MeasureOver
+; 
+; 	smb0	Timer_Flag
+; 	rmb1	Timer_Flag
+; 	jsr		F_SymbolRegulate
+; 	jsr		F_Time_Display
+; 	jsr		F_Display_Week
+; 
+; 	lda		#4										; 上电蜂鸣器响2声
+; 	sta		Beep_Serial
+; 	smb0	TMRC
+; Loop_BeepTest:										; 响铃两声
+; 	jsr		F_Louding
+; 	lda		Beep_Serial
+; 	bne		Loop_BeepTest
+; 	rmb0	TMRC
+; 
+; 	lda		#0001B
+; 	sta		Sys_Status_Flag
+; 	lda		#0
+; 	sta		Sys_Status_Ordinal
+; 
+; 	smb4	IER										;  上电显示完成，重新开启按键中断
 
 	bra		Global_Run
 
@@ -182,53 +182,15 @@ V_IRQ:
 
 L_DivIrq:
 	rmb0	IFR									; 清中断标志位
-	sei
-	inc		Counter_20ms
-	lda		Counter_20ms
-	cmp		#1
-	beq		RFC_Start
-	cmp		#11
-	beq		RFC_Sample
-	cli
-	bra		L_EndIrq
-RFC_Start:
-	jsr		F_RFC_Channel_Select
-	cli
-	bra		L_EndIrq
-RFC_Sample:
-	jsr		L_Get_RFC_Data
-	lda		#0
-	sta		Counter_20ms
-	cli
-	bra		L_EndIrq
+	jmp		I_DivIRQ_Handler
 
 L_Timer0Irq:									; 用于蜂鸣器
 	rmb1	IFR									; 清中断标志位
-
-	inc		Counter_16Hz
-	lda		Counter_16Hz						; 16Hz计数
-	cmp		#192
-	bcs		L_16Hz_Out
-	bra		L_EndIrq
-L_16Hz_Out:
-	lda		#0
-	sta		Counter_16Hz
-	smb6	Timer_Flag							; 16Hz标志
-	bra		L_EndIrq
+	jmp		I_Timer0IRQ_Handler
 
 L_Timer1Irq:									; 用于快加计时
 	rmb2	IFR									; 清中断标志位
-	smb4	Timer_Flag							; 扫键16Hz标志
-	lda		Counter_4Hz							; 4Hz计数
-	cmp		#03
-	bcs		L_4Hz_Out
-	inc		Counter_4Hz
-	bra		L_EndIrq
-L_4Hz_Out:
-	lda		#$0
-	sta		Counter_4Hz
-	smb5	Key_Flag							; 快加4Hz标志
-	bra		L_EndIrq
+	jmp		I_Timer1IRQ_Handler
 
 L_Timer2Irq:
 	rmb3	IFR									; 清中断标志位
@@ -236,29 +198,11 @@ L_Timer2Irq:
 
 L_PaIrq:
 	rmb4	IFR									; 清中断标志位
-	rmb4	SYSCLK
-	bbr0	RFC_Flag,?RFC_Sample_Juge			; 按键会打断RFC采样
-	jsr		F_RFC_Abort
-?RFC_Sample_Juge:
-	smb0	Key_Flag
-	smb1	Key_Flag							; 首次触发
-	rmb3	Timer_Flag							; 如果有新的下降沿到来，清快加标志位
-	rmb4	Timer_Flag							; 16Hz计时
-	smb1	TMRC								; 打开快加定时
-
-	bra		L_EndIrq
+	jmp		I_PaIRQ_Handler
 
 L_LcdIrq:
 	rmb6	IFR									; 清中断标志位
-
-	lda		COM_Counter
-	cmp		#3
-	bcc		COM_Display
-	lda		#0
-	sta		COM_Counter
-COM_Display:
-	jsr		L_Send_Buffer_COM
-	inc		COM_Counter
+	jmp		I_LcdIRQ_Handler
 
 L_EndIrq:
 	plp
@@ -268,38 +212,7 @@ L_EndIrq:
 	rti
 
 
-;I_PaIRQ_Handler:
-;	smb0	Key_Flag
-;	smb1	Key_Flag							; 首次触发
-;	rmb3	Timer_Flag							; 如果有新的下降沿到来，清快加标志位
-;	rmb4	Timer_Flag							; 16Hz计时
-;
-;	smb1	TMRC								; 打开快加定时
-;	bra		L_EndIrq
-
-I_Timer2IRQ_Handler:
-	smb0	Timer_Flag							; 半秒标志
-	smb0	Symbol_Flag
-	lda		Counter_1Hz
-	cmp		#01
-	bcs		L_1Hz_Out
-	inc		Counter_1Hz
-	bra		L_EndIrq
-L_1Hz_Out:
-	lda		#$0
-	sta		Counter_1Hz
-	lda		Timer_Flag
-	ora		#10100110B							; 1S、增S、熄屏的1S、响铃1S标志位
-	sta		Timer_Flag
-	smb1	Backlight_Flag						; 亮屏1S计时
-	smb7	Key_Flag							; DP显示1S计时
-	smb1	Symbol_Flag
-	smb7	Clock_Flag							; 返回时显1S计时
-	smb5	RFC_Flag							; 30S采样计时
-	rmb4	Clock_Flag							; 清除响闹阻塞标志
-	bra		L_EndIrq
-
-
+.include	IRQ.asm
 .include	ScanKey.asm
 .include	Time.asm
 .include	Calendar.asm
@@ -312,7 +225,6 @@ L_1Hz_Out:
 .include	RFC.asm
 .include	RFCTable.asm
 .include	TemperHandle.asm
-.include	HumidHandle.asm
 .include	PowerManage.asm
 .include	TestMode.asm
 

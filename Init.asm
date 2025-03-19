@@ -45,7 +45,7 @@ F_Beep_Init:
 	rmb0	TMCLK								; TIM0选择时钟源为Fsub
 	rmb1	TMCLK
 
-	lda		#256-8								; 配置TIM0频率为2048Hz
+	lda		#256-8								; 配置TIM0频率为4096Hz
 	sta		TMR0
 
 	rmb3	PB_TYPE								; PB3选择NMOS输出0避免漏电
@@ -101,8 +101,8 @@ F_Timer_Init:
 	sta		PADF1								; T000选择为Fsub
 
 	; TIM2时钟源DIV,Fsub 64分频512Hz，关闭定时器同步
-	lda		#C_Asynchronous+C_DIVC_Fsub_64
-	sta		DIVC								; 关闭定时器同步，DIV时钟源为Fsub/64(512Hz)
+	lda		#C_Asynchronous+C_DIVC_Fsub_32
+	sta		DIVC								; 关闭定时器同步，DIV时钟源为Fsub/32(1024Hz)
 
 	lda		#256-8								; 配置TIM0频率为4096Hz
 	sta		TMR0

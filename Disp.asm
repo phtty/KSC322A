@@ -166,62 +166,51 @@ One_Digit:
 
 
 
-; 发送当前COM的缓存内容
-L_Send_Buffer_COM:
-	rmb7	PD							; 发送数据时需要LE拉低锁存5020当前数据
-	lda		COM_Counter
+; 发送显存到5020
+L_Send_DRAM:
+	LE_SET_LOW							; 发送数据时需要LE拉低锁存5020当前数据
+	ldx		#12
+	
+?Loop_Start:							; 拷贝显存准备进行显示
+	dex
+	lda		LED_RamAddr,x				; 12byte的显存全部拷贝
+	sta		LED_RamBKAddr,x
+	bne		?Loop_Start
 
-	clc									; 乘以4作偏移
-	rol
-	rol
-	tax
-	lda		LED_RamAddr,x				; 32个Seg的状态依次送进LED_Temp
-	sta		LED_Temp
-	inx
-	lda		LED_RamAddr,x
-	sta		LED_Temp+1
-	inx
-	lda		LED_RamAddr,x
-	sta		LED_Temp+2
-	inx
-	lda		LED_RamAddr,x
-	sta		LED_Temp+3
-
-	lda		#32
-	sta		LED_Temp+4
+	lda		#12*8
+	sta		P_Temp
 L_Sending_Loop:							; 由于5020是MSB，发送必须高位先发
-	rol		LED_Temp					; 循环左移后，检测C位
-	rol		LED_Temp+1
-	rol		LED_Temp+2
-	rol		LED_Temp+3
+	ldx		#0
+	clc
+	php
+?Loop_ROL:
+	plp
+	rol		LED_RamBKAddr,x
+	php									; 保存位移出来的C位
+	inx
+	cpx		#12
+	bcc		?Loop_ROL					; 12byte的显存全部左移1位
+
+	plp
 	bcc		L_Send_0
-	smb5	PD							; 如果是1，则输出高
+	SDI_SET_HIGH						; 如果是1，则输出高
 	bra		L_CLK_Change
 L_Send_0:
-	rmb5	PD							; 0则输出低
+	SDI_SET_LOW							; 0则输出低
 L_CLK_Change:
-	rmb6	PD							; CLK产生一次上升沿使得5020开始位移
+	CLK_SET_LOW							; CLK产生一次上升沿使得5020开始位移
 	nop									; 延时6个指令周期确保IO口翻转完成
 	nop
 	nop
-	smb6	PD
-	dec		LED_Temp+4
+	CLK_SET_HIGH
+	dec		P_Temp
 	bne		L_Sending_Loop
- 
-	lda		PC							; 5020数据更改前需要先关闭所有COM避免亮上一个COM的灯
-	ora		#$0e
-	sta		PC
 
-	smb7	PD							; 5020取消锁存，接收新数据
+	LE_SET_HIGH							; 5020取消锁存，接收新数据
 	nop									; 延时6个指令周期确保IO口翻转完成
 	nop
 	nop
-	rmb7	PD							; 锁存数据避免意外改变
-
-	ldx		COM_Counter					; 32bit发送完成，根据COM数选择对应COM引脚
-	lda		Table_COMx_SEL,x			; 查表得出当前COM的IO状态
-	and		PC
-	sta		PC							; COM选择
+	LE_SET_LOW							; 锁存数据避免意外改变
 
 	rts
 
@@ -289,7 +278,3 @@ Table_Week_7bit:
 	.byte	$40	; SAT
 	.byte	$00	; undisplay
 
-Table_COMx_SEL:
-	.byte	$f7	; COM0_SEL
-	.byte	$fb	; COM1_SEL
-	.byte	$fd	; COM2_SEL
