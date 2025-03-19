@@ -6,7 +6,7 @@ CODE_BEG	EQU		E000H							; 起始地址
 PROG		SECTION OFFSET CODE_BEG					; 定义代码段的偏移量从CODE_BEG开始，用于组织程序代码。
 .include	50Px1x.h								; 头文件
 .include	RAM.INC	
-.include	MACRO.mac
+; .include	MACRO.mac
 
 STACK_BOT		EQU		FFH							; 堆栈底部
 .PROG												; 程序开始
