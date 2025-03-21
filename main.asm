@@ -53,7 +53,11 @@ L_Clear_Ram_Loop:
 ; 	smb0	PC_IO_Backup
 ; 
  	jsr		F_Test_Display							; 上电显示部分
-; 
+	lda		#$02
+	sta		Beep_Serial
+	smb4	Key_Flag
+	smb3	Timer_Switch
+
 ; 	jsr		F_RFC_MeasureStart						; 上电温湿度测量
 ; Wait_RFC_MeasureOver:
 ; 	jsr		F_RFC_MeasureManage
@@ -90,7 +94,7 @@ MainLoop:
 	;rmb4	SYSCLK
 Global_Run:											; 全局生效的功能处理
 	;jsr		F_KeyHandler
-	;jsr		F_BeepManage
+	jsr		F_BeepManage
 	;jsr		F_PowerManage
 	;jsr		F_Time_Run								; 走时
 	;jsr		F_SymbolRegulate

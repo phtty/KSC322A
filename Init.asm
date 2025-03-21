@@ -52,12 +52,13 @@ F_Beep_Init:
 
 	;lda		#256-8								; 配置TIM0频率为4096Hz
 	;sta		TMR0
+	lda		PB									; PB3配置为输出0
+	and		#$f7
+	sta		PB
+	lda		PB_TYPE
+	ora		#$8
 
 	rmb3	PB_TYPE								; PB3选择NMOS输出0避免漏电
-
-	;rmb1	PADF0								; PB3 PWM输出控制，初始化不输出
-	;rmb3	PADF0								; 配置PB3的PWM输出模式，频率为TIM0/2
-	;smb4	PADF0
 
 	rts
 
@@ -116,8 +117,7 @@ F_Timer_Init:
 	lda		#0
 	sta		IFR									; 清理中断标志位
 	lda		IER									; Tim2定时器中断用于PWM调光、按键扫描、蜂鸣间隔、快加频率
-;	ora		#C_TMR2I+C_LCDI+C_DIVI				; LCD中断用于2Hz、1Hz的半S处理、1S处理和走时
-	ora		#C_LCDI+C_TMR2I
+	ora		#C_TMR2I+C_LCDI+C_DIVI				; LCD中断用于2Hz、1Hz的半S处理、1S处理和走时
 	sta		IER									; DIV中断用于红外接收、响闹时钟源，RFC测量计时
 
 	rts

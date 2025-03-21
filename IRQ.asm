@@ -7,7 +7,7 @@ I_DivIRQ_Handler:
 	sta		Counter_4096Hz
 	bbs0	Counter_4096Hz,L_50Hz_Juge
 	lda		PB
-	eor		#%00000100
+	eor		#%00001000
 	sta		PB
 
 L_50Hz_Juge:
@@ -30,29 +30,12 @@ RFC_Sample:
 
 
 I_Timer0IRQ_Handler:
-;	inc		Counter_21Hz
-;	lda		Counter_21Hz					; 16Hz计数
-;	cmp		#192
-;	bcs		L_16Hz_Out
-;	jmp		L_EndIrq
-;L_16Hz_Out:
-;	lda		#0
-;	sta		Counter_21Hz
-;	smb6	Timer_Flag						; 16Hz标志
+
 	jmp		L_EndIrq
 
 
 I_Timer1IRQ_Handler:
-;	smb4	Timer_Flag						; 扫键16Hz标志
-;	lda		Counter_4Hz						; 4Hz计数
-;	cmp		#03
-;	bcs		L_4Hz_Out
-;	inc		Counter_4Hz
-;	jmp		L_EndIrq
-;L_4Hz_Out:
-;	lda		#$0
-;	sta		Counter_4Hz
-;	smb5	Key_Flag						; 快加4Hz标志
+
 	jmp		L_EndIrq
 
 
@@ -109,9 +92,9 @@ I_PaIRQ_Handler:
 	rmb4	SYSCLK
 	smb0	Key_Flag
 	smb1	Key_Flag						; 首次触发
-	rmb3	Timer_Flag						; 如果有新的下降沿到来，清快加标志位
-	rmb4	Timer_Flag						; 16Hz计时
-	smb1	TMRC							; 打开快加定时
+	rmb2	Key_Flag						; 如果有新的下降沿到来，清快加标志位
+	rmb4	Timer_Flag						; 清32Hz标志位
+	smb4	Timer_Switch					; 打开快加定时
 
 	jmp		L_EndIrq
 

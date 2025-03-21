@@ -24,18 +24,18 @@ L_KeyScan:										; 长按处理部分
 	bbr4	Timer_Flag,L_KeyScanExit			; 没开始快加时，用16Hz扫描
 	rmb4	Timer_Flag
 	lda		PA
-	eor		#$1c								; 按键是反逻辑的，将指定的几位按键口取反
-	and		#$1c
+	eor		#$3c								; 按键是反逻辑的，将指定的几位按键口取反
+	and		#$3c
 	cmp		PA_IO_Backup						; 若检测到有按键的状态变化则退出快加判断并结束
-	beq		L_4_16Hz_Count
+	beq		L_4_32Hz_Count
 	jsr		F_SpecialKey_Handle					; 长按终止时，进行一次特殊按键的处理
 	bra		L_KeyExit
-L_4_16Hz_Count:
-	bbs2	Key_Flag,Counter_NoAdd			; 在快加触发后不再继续增加计数
+L_4_32Hz_Count:
+	bbs2	Key_Flag,Counter_NoAdd				; 在快加触发后不再继续增加计数
 	inc		QuickAdd_Counter					; 否则计数溢出后会导致不触发按键功能
 Counter_NoAdd:
 	lda		QuickAdd_Counter
-	cmp		#32
+	cmp		#64
 	bcs		L_QuikAdd
 	rts											; 长按计时，必须满2S才有快加
 L_QuikAdd:
@@ -44,39 +44,33 @@ L_QuikAdd:
 NoQuikAdd_Beep:
 	smb2	Key_Flag
 	rmb2	Timer_Flag
+	smb2	Timer_Switch						; 开启4Hz计时
 
 
 L_KeyHandle:
 	jsr		F_KeyMatrix_PC5Scan_Ready			; 判断Down键和Backlight键
 	lda		PA
-	eor		#$0c								; 按键是反逻辑的，将指定的几位按键口取反
-	and		#$0c
+	eor		#$3c								; 按键是反逻辑的，将指定的几位按键口取反
+	and		#$3c
 	cmp		#$04
-	bne		No_KeyDTrigger						; 由于跳转指令寻址能力的问题，这里采用jmp进行跳转
-	jmp		L_KeyDTrigger
+	bne		No_KeySTrigger						; 由于跳转指令寻址能力的问题，这里采用jmp进行跳转
+	jmp		L_KeySTrigger						; S键触发
+No_KeySTrigger:
+	cmp		#$08
+	bne		No_KeyDTrigger
+	jmp		L_KeyDTrigger						; D键触发
 No_KeyDTrigger:
-	cmp		#$08
-	bne		No_KeyBTrigger
-	jmp		L_KeyBTrigger
-No_KeyBTrigger:
-	jsr		F_KeyMatrix_PC4Scan_Ready			; 判断Mode键、Alarm键、Up键
-	lda		PA
-	eor		#$1c								; 按键是反逻辑的，将指定的几位按键口取反
-	and		#$1c
-	cmp		#$04
-	bne		No_KeyUTrigger
-	jmp		L_KeyUTrigger
-No_KeyUTrigger:
-	cmp		#$08
-	bne		No_KeyATrigger
-	jmp		L_KeyATrigger
-No_KeyATrigger:
 	cmp		#$10
+	bne		No_KeyUTrigger
+	jmp		L_KeyUTrigger						; U键触发
+No_KeyUTrigger:
+	cmp		#$20
 	bne		L_KeyExit
-	jmp		L_KeyMTrigger						; M键触发
+	jmp		L_KeyFTrigger						; F键触发
 
 L_KeyExit:
-	rmb1	TMRC								; 关闭快加16Hz计时的定时器
+	rmb4	Timer_Switch						; 关闭32Hz、4Hz计时
+	rmb2	Timer_Switch
 	rmb0	Key_Flag							; 清相关标志位
 	rmb2	Key_Flag
 	lda		#0									; 清理相关变量
@@ -104,12 +98,12 @@ SpecialKey_Handle:
 	bbs2	Key_Flag,SpecialKey_NoBeep
 	jsr		L_Key_Beep
 SpecialKey_NoBeep:
-	bbs0	SpecialKey_Flag,L_KeyA_ShortHandle	; 短按的特殊功能处理
-	bbs1	SpecialKey_Flag,L_KeyB_ShortHandle
+	bbs0	SpecialKey_Flag,L_KeyF_ShortHandle	; 短按的特殊功能处理
+	bbs1	SpecialKey_Flag,L_KeyD_ShortHandle
 	bbs2	SpecialKey_Flag,L_KeyM_ShortHandle
 	bbs3	SpecialKey_Flag,L_KeyU_ShortHandle
-	bbs4	SpecialKey_Flag,L_KeyD_ShortHandle
-L_KeyA_ShortHandle:
+	bbs4	SpecialKey_Flag,L_KeyS_ShortHandle
+L_KeyF_ShortHandle:
 	lda		Sys_Status_Flag
 	cmp		#1000B
 	bne		No_SwitchState_AlarmSet				; 闹设模式切换设置内容
@@ -119,7 +113,7 @@ No_SwitchState_AlarmSet:
 	jsr		SwitchState_AlarmDis				; 切换闹钟显示状态
 	rts
 
-L_KeyB_ShortHandle:
+L_KeyD_ShortHandle:
 	jsr		LightLevel_Change					; 三档亮度切换
 	rts
 
@@ -154,65 +148,65 @@ StatusCS_No_KeyU:
 KeyU_ShortHandle_Exit:
 	rts
 
-L_KeyD_ShortHandle:
+L_KeyS_ShortHandle:
 	lda		Sys_Status_Flag
 	and		#0011B
-	beq		KeyD_NoDisMode
+	beq		KeyS_NoDisMode
 	jsr		SwitchState_DisMode					; 切换固显-轮显	
 	rts
-KeyD_NoDisMode:
+KeyS_NoDisMode:
 	lda		Sys_Status_Flag
 	cmp		#0100B
-	bne		StatusCS_No_KeyD_Short
+	bne		StatusCS_No_KeyS_Short
 	jsr		SubNum_CS							; 时设模式减数
 	rts
-StatusCS_No_KeyD_Short:
+StatusCS_No_KeyS_Short:
 	cmp		#1000B
-	bne		KeyD_ShortHandle_Exit
+	bne		KeyS_ShortHandle_Exit
 	jsr		SubNum_AS							; 闹设模式减数
-KeyD_ShortHandle_Exit:
+KeyS_ShortHandle_Exit:
 	rts
 
 
 
 ; 按键触发函数，处理每个按键触发后的响应条件
-L_KeyATrigger:
+L_KeyFTrigger:
 	jsr		L_Universal_TriggerHandle			; 通用按键处理
 	jsr		L_Key_NoSnoozeLoud					; 按键处理贪睡和响闹
 
 	lda		Sys_Status_Flag
 	cmp		#0100B
-	bne		StatusCS_No_KeyA
+	bne		StatusCS_No_KeyF
 	jmp		L_KeyExit							; 时钟设置模式A键无效
-StatusCS_No_KeyA:
+StatusCS_No_KeyF:
 	cmp		#1000B
-	bne		StatusAS_No_KeyA
-	bbr2	Key_Flag,L_ASMode_KeyA_ShortTri
+	bne		StatusAS_No_KeyF
+	bbr2	Key_Flag,L_ASMode_KeyF_ShortTri
 	jsr		L_Key_NoBeep
 	jmp		L_KeyExit							; 闹钟设置模式A键长按无效
-L_ASMode_KeyA_ShortTri:
+L_ASMode_KeyF_ShortTri:
 	smb0	SpecialKey_Flag						; 闹设模式下，A键为特殊功能按键
 	rts
-StatusAS_No_KeyA:
-	bbs2	Key_Flag,L_DisMode_KeyA_LongTri
+StatusAS_No_KeyF:
+	bbs2	Key_Flag,L_DisMode_KeyF_LongTri
 	smb0	SpecialKey_Flag						; 显示模式下，A键为特殊功能按键
 	rts
-L_DisMode_KeyA_LongTri:
+L_DisMode_KeyF_LongTri:
 	jsr		SwitchState_AlarmSet				; 从显示模式切换到闹钟设置模式
 	jmp		L_KeyExit							; 快加时，不重复执行功能函数
 
 
-L_KeyBTrigger:
+L_KeyDTrigger:
 	jsr		L_Universal_TriggerHandle			; 通用按键处理
 
-	bbr2	Clock_Flag,StatusLM_No_KeyB
+	bbr2	Clock_Flag,StatusLM_No_KeyD
 	jsr		Alarm_Snooze						; 响闹时贪睡处理
 	jmp		L_KeyExit
-StatusLM_No_KeyB:
-	bbs2	Key_Flag,L_DisMode_KeyB_LongTri
+StatusLM_No_KeyD:
+	bbs2	Key_Flag,L_DisMode_KeyD_LongTri
 	smb1	SpecialKey_Flag
 	rts
-L_DisMode_KeyB_LongTri:
+L_DisMode_KeyD_LongTri:
 	jsr		TemperMode_Change					; 切换摄氏-华氏度
 	jmp		L_KeyExit							; 快加时，不重复执行功能函数
 
@@ -277,33 +271,33 @@ L_KeyUTrigger_Exit:
 	rts
 
 
-L_KeyDTrigger:
+L_KeySTrigger:
 	jsr		L_Universal_TriggerHandle			; 通用按键处理
 	jsr		L_Key_NoSnoozeLoud					; 按键处理贪睡和响闹
 
 	lda		Sys_Status_Flag
 	and		#0011B
-	beq		Status_NoDisMode_KeyD				; 判断是否为显示模式
-	bbr2	Key_Flag,L_DMode_KeyD_ShortTri
+	beq		Status_NoDisMode_KeyS				; 判断是否为显示模式
+	bbr2	Key_Flag,L_DMode_KeyS_ShortTri
 	jsr		L_Key_NoBeep
 	jmp		L_KeyExit							; 显示模式D键长按无效
-L_DMode_KeyD_ShortTri:
+L_DMode_KeyS_ShortTri:
 	smb4	SpecialKey_Flag
 	rts
-Status_NoDisMode_KeyD:
-	bbr2	Key_Flag,KeyD_NoQuikAdd
+Status_NoDisMode_KeyS:
+	bbr2	Key_Flag,KeyS_NoQuikAdd
 	rmb4	SpecialKey_Flag
 	lda		Sys_Status_Flag
 	cmp		#0100B
-	bne		StatusCS_No_KeyD
+	bne		StatusCS_No_KeyS
 	jmp		SubNum_CS							; 时设模式减数
-StatusCS_No_KeyD:
+StatusCS_No_KeyS:
 	cmp		#1000B
-	bne		L_KeyDTrigger_Exit
+	bne		L_KeySTrigger_Exit
 	jmp		SubNum_AS							; 闹设模式减数
-KeyD_NoQuikAdd:
+KeyS_NoQuikAdd:
 	smb4	SpecialKey_Flag
-L_KeyDTrigger_Exit:
+L_KeySTrigger_Exit:
 	rts
 
 
@@ -341,10 +335,10 @@ WakeUp_Event:
 	lda		#0
 	sta		Sys_Status_Ordinal					; 时钟显示模式下熄屏亮屏会回到时显
 	jsr		L_Open_5020							; 亮屏开启LCD中断
-	bbr2	Backlight_Flag,No_RFCMesure_KeyBeep	; 手动熄屏不会测量温湿度
+	bbr2	Backlight_Flag,No_RFCMesure_KeyDeep	; 手动熄屏不会测量温湿度
 	rmb2	Backlight_Flag
 	jsr		F_RFC_MeasureStart					; 自动熄屏唤醒后立刻进行一次温湿度测量
-No_RFCMesure_KeyBeep:
+No_RFCMesure_KeyDeep:
 	pla
 	pla
 	jmp		L_KeyExit							; 唤醒触发的那次按键，没有按键功能
