@@ -128,7 +128,7 @@ L_Judge_Dis_7Bit_WordDot:				; 显示循环的开始
 	bcc		L_CLR_7bit					; 当前段的值若是0则进清点子程序
 	lda		LED_RamAddr,x				; 将目标段的显存的特定bit位置1来打亮
 	ora		P_Temp+3					; 将COM和SEG信息与LED RAM地址进行逻辑或操作
-	
+
 	sta		LED_RamAddr,x
 	bra		L_Inc_Dis_Index_Prog_Word	; 跳转到显示索引增加的子程序。
 L_CLR_Word_7bit:	
@@ -170,16 +170,18 @@ One_Digit:
 L_Send_DRAM:
 	LE_SET_LOW							; 发送数据时需要LE拉低锁存5020当前数据
 	ldx		#12
-	
+
 ?Loop_Start:							; 拷贝显存准备进行显示
 	dex
+	php
 	lda		LED_RamAddr,x				; 12byte的显存全部拷贝
 	sta		LED_RamBKAddr,x
+	plp
 	bne		?Loop_Start
 
 	lda		#12*8
 	sta		P_Temp
-L_Sending_Loop:							; 由于5020是MSB，发送必须高位先发
+L_Sending_Loop:							; 5020是MSB，使用左移先发送高位
 	ldx		#0
 	clc
 	php
@@ -193,7 +195,7 @@ L_Sending_Loop:							; 由于5020是MSB，发送必须高位先发
 
 	plp
 	bcc		L_Send_0
-	SDI_SET_HIGH						; 如果是1，则输出高
+	SDI_SET_HIGH						; 判断位移出来的C，1则输出高
 	bra		L_CLK_Change
 L_Send_0:
 	SDI_SET_LOW							; 0则输出低

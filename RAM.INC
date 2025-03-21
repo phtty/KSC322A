@@ -25,9 +25,14 @@ LED_Ram_BK				DS		12
 R_Int_Backup			DS		1
 
 Counter_1Hz				DS		1
+Counter_2Hz				DS		1
 Counter_4Hz				DS		1
-Counter_16Hz			DS		1
-Counter_20ms			DS		1
+Counter_21Hz			DS		1
+Counter_32Hz			DS		1
+Counter_50Hz			DS		1
+Counter_256Hz			DS		1
+Counter_4096Hz			DS		1
+
 Counter_DP				DS		1
 Count_RFC				DS		1
 
@@ -40,29 +45,49 @@ AlarmLoud_Counter		DS		1
 Calendar_Flag			DS		1
 ;bit0 = 1 闰年
 ;bit1 = 1 增日期
+;bit2 = 1 星期反显
 
 Clock_Flag				DS		1
 ;bit0 = 1 12h模式
 ;bit1 = 1 闹钟触发
 ;bit2 = 1 响闹模式
 ;bit3 = 1 贪睡模式
-;bit4 = 1 响闹阻塞标志，防止短时间内关闭响闹继续进闹钟触发
+;bit4 = 1 
 ;bit5	  上次的响闹模式，判断是响闹结束还是未响闹
 ;bit6 = 1 贪睡按键触发导致的响闹结束
-;bit7 = 1 返回时显模式1S计时
 
 
 Timer_Flag				DS		1
-;bit0 = 1 Timer2 半S计时
-;bit1 = 1 Timer2 1S计时
-;bit2 = 1 增S标志
-;bit3 = 1 快加标志
-;bit4 = 1 Timer1 16Hz计时
-;bit5 = 1 Timer2 熄屏1S计时
-;bit6 = 1 Timer0 16Hz标志
-;bit7 = 1 Timer2 响铃1S计时
+;bit0 = 1 1Hz标志
+;bit1 = 1 2Hz标志
+;bit2 = 1 4Hz标志
+;bit3 = 1 21Hz标志
+;bit4 = 1 32Hz标志
+;bit5 = 1 50Hz标志
+;bit6 = 1 256Hz标志
+;bit7 = 1 4096Hz标志
 
-Symbol_Flag				DS		1	; 符号操作
+Timer_Switch			DS		1
+;bit0 = 1 1Hz开关
+;bit1 = 1 2Hz开关
+;bit2 = 1 4Hz开关
+;bit3 = 1 21Hz开关
+;bit4 = 1 32Hz开关
+;bit5 = 1 50Hz开关
+;bit6 = 1 256Hz开关
+;bit7 = 1 4096Hz开关
+
+Time_Flag				DS		1
+;bit0 = 1 走时加时1S标志
+;bit1 = 1 响铃加时1S标志
+;bit2 = 1 RFC采样加时1S标志
+;bit3 = 1 返回初始状态加时1S标志
+;bit4 = 1 清除响闹阻塞标志
+;bit5 = 1 亮屏时间加时1S标志
+;bit6 = 1 RFC采样间隔加时1S标志
+
+; 符号操作
+Symbol_Flag				DS		1
 ;bit0 = 1 ALM点半S标志
 ;bit1 = 1 ALM点1S标志
 
@@ -78,12 +103,12 @@ Sys_Status_Ordinal		DS		1
 Key_Flag				DS		1
 ;bit0 = 1 扫键标志位
 ;bit1 = 1 首次触发
-;bit2 = 1 轮流显示标志位
+;bit2 = 1 快加标志位
 ;bit3 = 1 屏幕唤醒事件标志位
 ;bit4 = 1 按键提示音标志位
 ;bit5 = 1 长按扫键4Hz标志
-;bit6 = 1 DP显示标志位
-;bit7 = 1 DP显示1S标志
+;bit6 = 1 
+;bit7 = 1 
 
 ; 长短按功能不同的按键
 SpecialKey_Flag			DS		1
@@ -99,22 +124,22 @@ RFC_Flag				DS		1
 ;bit2 = 1 负温度
 ;bit3 = 1 湿度表查询完成标志位
 ;bit4 = 1 华氏度模式
-;bit5 = 1 温湿度测量1S标志
+;bit5 = 1
 ;bit6 = 1 温湿度测量完成标志
 
 Backlight_Flag			DS		1
 ;bit0 = 1 DC5V接入时唤醒
-;bit1 = 1 亮屏1S计时
+;bit1 = 1 亮屏标志
 ;bit2 = 1 手动进入熄屏模式
 
-Backlight_Level			DS		1	; 亮度等级
+Light_Level			DS		1	; 亮度等级
 ;0 低亮
-;1 高亮
+;1 半亮
+;2 高亮
 
 Alarm_Switch			DS		1	; 各个闹钟开关
 ;bit0 = 1 闹钟1开启
 ;bit1 = 1 闹钟2开启
-;bit2 = 1 闹钟3开启
 
 Triggered_AlarmGroup	DS		1
 

@@ -331,13 +331,6 @@ Display_FahrenheitDegree:
 
 
 F_SymbolRegulate:								; 显示常亮点
-	ldx		#led_TMP
-	jsr		F_DisSymbol
-	ldx		#led_Per1
-	jsr		F_DisSymbol
-	ldx		#led_Per2
-	jsr		F_DisSymbol
-
 	jsr		L_ALMDot_Blink
 	jsr		F_AlarmSW_Display
 	rts
@@ -355,30 +348,22 @@ L_SymbolDis:
 L_ALM_Dot_Dis:
 	bbs0	Triggered_AlarmGroup,Group1_Bright
 	bbs1	Triggered_AlarmGroup,Group2_Bright
-	bbs2	Triggered_AlarmGroup,Group3_Bright
 Group1_Bright:
 	jsr		F_DisAL1
 	rts
 Group2_Bright:
 	jsr		F_DisAL2
 	rts
-Group3_Bright:
-	jsr		F_DisAL3
-	rts
 	
 L_ALM_Dot_Clr:
 	rmb1	Symbol_Flag							; ALM点1S标志
 	bbs0	Triggered_AlarmGroup,Group1_Extinguish
 	bbs1	Triggered_AlarmGroup,Group2_Extinguish
-	bbs2	Triggered_AlarmGroup,Group3_Extinguish
 Group1_Extinguish:
 	jsr		F_ClrAL1
 	rts
 Group2_Extinguish:
 	jsr		F_ClrAL2
-	rts
-Group3_Extinguish:
-	jsr		F_ClrAL3
 	rts
 
 
@@ -406,92 +391,12 @@ Alarm2_Switch:
 	and		#010B
 	beq		Alarm2_Switch_Off
 	jsr		F_DisAL2
-	bra		Alarm3_Switch
+	rts
 Alarm2_Switch_Off:
 	jsr		F_ClrAL2
-
-Alarm3_Switch:
-	lda		Alarm_Switch
-	and		#100B
-	beq		Alarm3_Switch_Off
-	jsr		F_DisAL3
-	rts
-Alarm3_Switch_Off:
-	jsr		F_ClrAL3
 	rts
 
 
-
-
-F_DP_Display:
-	bbs6	Key_Flag,DP_Display				; 没有DP显示标志则显示时钟
-	rts
-DP_Display:
-	jsr		F_ClrCol						; DP显示需要灭秒点和PM点
-	jsr		F_ClrPM
-	bbs7	Key_Flag,DP_Display_Juge		; 在DP显示里，如果没1S则不继续显示时钟，直接退出
-	pla
-	pla
-	rts
-DP_Display_Juge:
-	rmb7	Key_Flag
-	inc		Counter_DP
-	lda		Counter_DP
-	cmp		#6
-	beq		DP_Display_Over					; 计满5s前一直显示DP
-
-	bbs2	Key_Flag,DP_RDMode
-	jsr		L_Dis_dp_1						; 固显DP-1
-	bra		DP_Mode_Return
-DP_RDMode:
-	jsr		L_Dis_dp_2						; 轮显DP-2
-DP_Mode_Return:
-	pla										; 等待1S标志到来，增加计数
-	pla
-	rts
-DP_Display_Over:
-	lda		#0
-	sta		Counter_DP
-	rmb6	Key_Flag
-	rts
-
-
-L_Dis_dp_1:
-	ldx		#led_d0
-	lda		#5
-	jsr		L_Dis_7Bit_WordDot
-
-	ldx		#led_d1
-	lda		#6
-	jsr		L_Dis_7Bit_WordDot
-
-	ldx		#led_d2
-	lda		#9
-	jsr		L_Dis_7Bit_WordDot
-
-	ldx		#led_d3
-	lda		#1
-	jsr		L_Dis_7Bit_DigitDot
-	rts
-
-
-L_Dis_dp_2:
-	ldx		#led_d0
-	lda		#5
-	jsr		L_Dis_7Bit_WordDot
-
-	ldx		#led_d1
-	lda		#6
-	jsr		L_Dis_7Bit_WordDot
-
-	ldx		#led_d2
-	lda		#9
-	jsr		L_Dis_7Bit_WordDot
-
-	ldx		#led_d3
-	lda		#2
-	jsr		L_Dis_7Bit_DigitDot
-	rts
 
 
 L_Dis_xxHr:
@@ -571,18 +476,6 @@ F_DisAL2:
 ; 灭AL2点
 F_ClrAL2:
 	ldx		#led_AL2
-	jsr		F_ClrSymbol
-	rts
-
-; 亮AL3点
-F_DisAL3:
-	ldx		#led_AL3
-	jsr		F_DisSymbol
-	rts
-
-; 灭AL3点
-F_ClrAL3:
-	ldx		#led_AL3
 	jsr		F_ClrSymbol
 	rts
 

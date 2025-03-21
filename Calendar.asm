@@ -102,52 +102,52 @@ F_Date_Display:
 
 
 F_DisYear_Set:
-	bbs3	Timer_Flag,L_KeyTrigger_NoBlink_Year	; 有快加时不闪烁
-	bbs0	Timer_Flag,L_Blink_Year					; 没有半S标志不闪烁
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Year	; 有快加时不闪烁
+	bbs1	Timer_Flag,L_Blink_Year					; 没有半S标志不闪烁
 	rts
 L_Blink_Year:
-	rmb0	Timer_Flag								; 清半S标志
-	bbs1	Timer_Flag,L_Year_Clear					; 有1S标志时灭
+	rmb1	Timer_Flag								; 清半S标志
+	bbs0	Timer_Flag,L_Year_Clear					; 有1S标志时灭
 L_KeyTrigger_NoBlink_Year:
 	jsr		L_DisDate_Year
 	rts
 L_Year_Clear:
-	rmb1	Timer_Flag								; 清1S标志
+	rmb0	Timer_Flag								; 清1S标志
 	jsr		F_UnDisplay_D0_1
 	jsr		F_UnDisplay_D2_3
 	rts
 
 
 F_DisMonth_Set:
-	bbs3	Timer_Flag,L_KeyTrigger_NoBlink_Month	; 有快加时不闪烁
-	bbs0	Timer_Flag,L_Blink_Month				; 没有半S标志不闪烁
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Month	; 有快加时不闪烁
+	bbs1	Timer_Flag,L_Blink_Month				; 没有半S标志不闪烁
 	rts
 L_Blink_Month:
-	rmb0	Timer_Flag								; 清半S标志
-	bbs1	Timer_Flag,L_Month_Clear				; 有1S标志时灭
+	rmb1	Timer_Flag								; 清半S标志
+	bbs0	Timer_Flag,L_Month_Clear				; 有1S标志时灭
 L_KeyTrigger_NoBlink_Month:
 	jsr		L_DisDate_Month
 	jsr		L_DisDate_Day
 	rts	
 L_Month_Clear:
-	rmb1	Timer_Flag								; 清1S标志
+	rmb0	Timer_Flag								; 清1S标志
 	jsr		F_UnDisplay_D0_1
 	rts
 
 
 F_DisDay_Set:
-	bbs3	Timer_Flag,L_KeyTrigger_NoBlink_Day		; 有快加时不闪烁
-	bbs0	Timer_Flag,L_Blink_Day					; 没有半S标志不闪烁
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Day		; 有快加时不闪烁
+	bbs1	Timer_Flag,L_Blink_Day					; 没有半S标志不闪烁
 	rts
 L_Blink_Day:
-	rmb0	Timer_Flag								; 清半S标志
-	bbs1	Timer_Flag,L_Day_Clear					; 有1S标志时灭
+	rmb1	Timer_Flag								; 清半S标志
+	bbs0	Timer_Flag,L_Day_Clear					; 有1S标志时灭
 L_KeyTrigger_NoBlink_Day:
 	jsr		L_DisDate_Day
 	jsr		L_DisDate_Month
 	rts	
 L_Day_Clear:
-	rmb1	Timer_Flag								; 清1S标志
+	rmb0	Timer_Flag								; 清1S标志
 	jsr		F_UnDisplay_D2_3
 	rts
 

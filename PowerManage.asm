@@ -25,8 +25,8 @@ WakeUp_Event_Yes:
 	lda		Backlight_Counter
 	cmp		#17
 	bcs		L_ShutDown_Display					; 计满15S则断开5020供电，熄屏等待按键唤醒
-	bbr1	Backlight_Flag,BacklightCount_NoAdd
-	rmb1	Backlight_Flag
+	bbr5	Time_Flag,BacklightCount_NoAdd
+	rmb5	Time_Flag
 	inc		Backlight_Counter
 BacklightCount_NoAdd:
 	rts
@@ -53,7 +53,7 @@ L_HLightLevel_WithTime:
 	smb0	PC_IO_Backup						; 修改记忆亮度为高亮
 	smb0	PC									; 设置为高亮
 	lda		#1
-	sta		Backlight_Level
+	sta		Light_Level
 ?LightLevel_Exit:
 	rts
 
@@ -70,7 +70,7 @@ L_LLightLevel_WithTime:
 	rmb0	PC									; 设置为低亮
 	rmb0	PC_IO_Backup						; 修改记忆亮度为低亮
 	lda		#0
-	sta		Backlight_Level
+	sta		Light_Level
 ?LightLevel_Exit:
 	rts
 
@@ -87,13 +87,13 @@ KeyU_HighLight:
 	smb0	PC									; 设置为高亮
 	smb0	PC_IO_Backup						; 修改记忆亮度为高亮
 	lda		#1
-	sta		Backlight_Level
+	sta		Light_Level
 	rts
 KeyU_LowLight:
 	rmb0	PC									; 设置为低亮
 	rmb0	PC_IO_Backup						; 修改记忆亮度为低亮
 	lda		#0
-	sta		Backlight_Level
+	sta		Light_Level
 	rts
 
 
@@ -107,12 +107,12 @@ L_LightLevel_WithKeyD:
 KeyD_HighLight:
 	smb0	PC									; 设置为高亮
 	lda		#1
-	sta		Backlight_Level
+	sta		Light_Level
 	rts
 KeyD_LowLight:
 	rmb0	PC									; 设置为低亮
 	lda		#0
-	sta		Backlight_Level
+	sta		Light_Level
 	rts
 
 

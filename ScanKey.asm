@@ -1,6 +1,6 @@
 ; 按键处理
 F_KeyHandler:
-	bbs3	Timer_Flag,L_Key4Hz					; 快加到来则4Hz扫一次，控制快加频率
+	bbs2	Key_Flag,L_Key4Hz					; 快加到来则4Hz扫一次，控制快加频率
 	bbr1	Key_Flag,L_KeyScan					; 首次按键触发
 	rmb1	Key_Flag							; 复位首次触发
 	jsr		L_KeyDelay
@@ -15,8 +15,8 @@ L_KeyYes:
 	bra		L_KeyHandle							; 首次触发处理结束
 
 L_Key4Hz:
-	bbr5	Key_Flag,L_KeyScanExit
-	rmb5	Key_Flag
+	bbr2	Timer_Flag,L_KeyScanExit
+	rmb2	Timer_Flag
 L_KeyScan:										; 长按处理部分
 	bbr0	Key_Flag,L_KeyNoScanExit			; 没有扫键标志则为无按键处理了，判断是否取消禁用RFC采样
 
@@ -31,7 +31,7 @@ L_KeyScan:										; 长按处理部分
 	jsr		F_SpecialKey_Handle					; 长按终止时，进行一次特殊按键的处理
 	bra		L_KeyExit
 L_4_16Hz_Count:
-	bbs3	Timer_Flag,Counter_NoAdd			; 在快加触发后不再继续增加计数
+	bbs2	Key_Flag,Counter_NoAdd			; 在快加触发后不再继续增加计数
 	inc		QuickAdd_Counter					; 否则计数溢出后会导致不触发按键功能
 Counter_NoAdd:
 	lda		QuickAdd_Counter
@@ -39,11 +39,11 @@ Counter_NoAdd:
 	bcs		L_QuikAdd
 	rts											; 长按计时，必须满2S才有快加
 L_QuikAdd:
-	bbs3	Timer_Flag,NoQuikAdd_Beep
+	bbs2	Key_Flag,NoQuikAdd_Beep
 	jsr		L_Key_Beep
 NoQuikAdd_Beep:
-	smb3	Timer_Flag
-	rmb5	Key_Flag
+	smb2	Key_Flag
+	rmb2	Timer_Flag
 
 
 L_KeyHandle:
@@ -78,7 +78,7 @@ No_KeyATrigger:
 L_KeyExit:
 	rmb1	TMRC								; 关闭快加16Hz计时的定时器
 	rmb0	Key_Flag							; 清相关标志位
-	rmb3	Timer_Flag
+	rmb2	Key_Flag
 	lda		#0									; 清理相关变量
 	sta		QuickAdd_Counter
 	sta		SpecialKey_Flag
@@ -101,7 +101,7 @@ F_SpecialKey_Handle:							; 特殊按键的处理
 	bne		SpecialKey_Handle
 	rts
 SpecialKey_Handle:
-	bbs3	Timer_Flag,SpecialKey_NoBeep
+	bbs2	Key_Flag,SpecialKey_NoBeep
 	jsr		L_Key_Beep
 SpecialKey_NoBeep:
 	bbs0	SpecialKey_Flag,L_KeyA_ShortHandle	; 短按的特殊功能处理
@@ -187,14 +187,14 @@ L_KeyATrigger:
 StatusCS_No_KeyA:
 	cmp		#1000B
 	bne		StatusAS_No_KeyA
-	bbr3	Timer_Flag,L_ASMode_KeyA_ShortTri
+	bbr2	Key_Flag,L_ASMode_KeyA_ShortTri
 	jsr		L_Key_NoBeep
 	jmp		L_KeyExit							; 闹钟设置模式A键长按无效
 L_ASMode_KeyA_ShortTri:
 	smb0	SpecialKey_Flag						; 闹设模式下，A键为特殊功能按键
 	rts
 StatusAS_No_KeyA:
-	bbs3	Timer_Flag,L_DisMode_KeyA_LongTri
+	bbs2	Key_Flag,L_DisMode_KeyA_LongTri
 	smb0	SpecialKey_Flag						; 显示模式下，A键为特殊功能按键
 	rts
 L_DisMode_KeyA_LongTri:
@@ -209,7 +209,7 @@ L_KeyBTrigger:
 	jsr		Alarm_Snooze						; 响闹时贪睡处理
 	jmp		L_KeyExit
 StatusLM_No_KeyB:
-	bbs3	Timer_Flag,L_DisMode_KeyB_LongTri
+	bbs2	Key_Flag,L_DisMode_KeyB_LongTri
 	smb1	SpecialKey_Flag
 	rts
 L_DisMode_KeyB_LongTri:
@@ -224,7 +224,7 @@ L_KeyMTrigger:
 	lda		Sys_Status_Flag
 	cmp		#0100B
 	bne		StatusCS_No_KeyM
-	bbr3	Timer_Flag,L_CSMode_KeyM_ShortTri
+	bbr2	Key_Flag,L_CSMode_KeyM_ShortTri
 	jsr		L_Key_NoBeep
 	jmp		L_KeyExit							; 时设模式M键长按无效
 L_CSMode_KeyM_ShortTri:
@@ -235,7 +235,7 @@ StatusCS_No_KeyM:
 	bne		StatusAS_No_KeyM
 	jmp		L_KeyExit							; 闹设模式M键无效
 StatusAS_No_KeyM:
-	bbs3	Timer_Flag,L_DisMode_KeyM_LongTri	; 判断显示模式下的M长按
+	bbs2	Key_Flag,L_DisMode_KeyM_LongTri	; 判断显示模式下的M长按
 	lda		Sys_Status_Flag
 	and		#0011B
 	beq		StatusDM_No_KeyM
@@ -254,14 +254,14 @@ L_KeyUTrigger:
 	lda		Sys_Status_Flag
 	and		#0011B
 	beq		Status_NoDisMode_KeyU				; 时钟显和闹显U键切换12/24h
-	bbr3	Timer_Flag,L_DMode_KeyU_ShortTri
+	bbr2	Key_Flag,L_DMode_KeyU_ShortTri
 	jsr		L_Key_NoBeep
 	jmp		L_KeyExit							; 显示模式U键长按无效
 L_DMode_KeyU_ShortTri:
 	smb3	SpecialKey_Flag
 	rts
 Status_NoDisMode_KeyU:
-	bbr3	Timer_Flag,KeyU_NoQuikAdd
+	bbr2	Key_Flag,KeyU_NoQuikAdd
 	rmb3	SpecialKey_Flag
 	lda		Sys_Status_Flag
 	cmp		#0100B
@@ -284,14 +284,14 @@ L_KeyDTrigger:
 	lda		Sys_Status_Flag
 	and		#0011B
 	beq		Status_NoDisMode_KeyD				; 判断是否为显示模式
-	bbr3	Timer_Flag,L_DMode_KeyD_ShortTri
+	bbr2	Key_Flag,L_DMode_KeyD_ShortTri
 	jsr		L_Key_NoBeep
 	jmp		L_KeyExit							; 显示模式D键长按无效
 L_DMode_KeyD_ShortTri:
 	smb4	SpecialKey_Flag
 	rts
 Status_NoDisMode_KeyD:
-	bbr3	Timer_Flag,KeyD_NoQuikAdd
+	bbr2	Key_Flag,KeyD_NoQuikAdd
 	rmb4	SpecialKey_Flag
 	lda		Sys_Status_Flag
 	cmp		#0100B
@@ -329,8 +329,8 @@ L_Universal_TriggerHandle:
 	sta		Return_Counter						; 重置返回时显模式计时
 
 	bbs4	PD,WakeUp_Event						; 若此时熄屏，按键会导致亮屏
-	bbs3	Timer_Flag,?Handle_Exit
-	rmb1	Backlight_Flag
+	bbs2	Key_Flag,?Handle_Exit
+	rmb5	Time_Flag
 	lda		#0
 	sta		Backlight_Counter
 ?Handle_Exit:
@@ -338,11 +338,8 @@ L_Universal_TriggerHandle:
 WakeUp_Event:
 	rmb4	PD
 	smb3	Key_Flag							; 熄屏状态有按键，则触发唤醒事件
-	bbr0	Sys_Status_Flag,DP_2Mode_Reset
-	bbr2	Key_Flag,DP_2Mode_Reset
 	lda		#0
 	sta		Sys_Status_Ordinal					; 时钟显示模式下熄屏亮屏会回到时显
-DP_2Mode_Reset:
 	jsr		L_Open_5020							; 亮屏开启LCD中断
 	bbr2	Backlight_Flag,No_RFCMesure_KeyBeep	; 手动熄屏不会测量温湿度
 	rmb2	Backlight_Flag
@@ -385,8 +382,6 @@ CD_ModeCHG:
 	lda		#0001B
 	sta		Sys_Status_Flag						; 切换时钟显示
 
-	rmb6	Key_Flag							; 清除DP显示
-
 	bbr0	Sys_Status_Ordinal,?SWState_ClockDis_Eixt
 	lda		#5
 	sta		Return_MaxTime						; 日显示模式，返回时间设为5S
@@ -401,8 +396,6 @@ CD_ModeCHG:
 
 ; 切换轮流显示-固定显示
 SwitchState_DisMode:
-	smb7	Key_Flag							; 设置DP显示1S标志
-	smb6	Key_Flag							; 设置DP显示标志
 	lda		#0
 	sta		Counter_DP
 	sta		Sys_Status_Ordinal
@@ -423,7 +416,6 @@ SwitchState_DisMode:
 SwitchState_AlarmDis:
 	lda		#5
 	sta		Return_MaxTime						; 显示模式，5S返回时显
-	jsr		DP_Display_Over						; 清空DP模式和计时，防止回去继续显示DP
 
 	lda		Sys_Status_Flag
 	cmp		#0010B
@@ -450,7 +442,6 @@ L_Ordinal_Exit_AD:
 SwitchState_ClockSet:
 	lda		#15
 	sta		Return_MaxTime						; 设置模式，15S返回时显
-	jsr		DP_Display_Over						; 清空DP模式和计时，防止回去继续显示DP
 
 	lda		Sys_Status_Flag
 	cmp		#0100B
@@ -470,8 +461,8 @@ L_Change_Ordinal_CS:
 	lda		#0001B
 	sta		Sys_Status_Flag
 L_Ordinal_Exit_CS:
-	smb0	Timer_Flag							; 退出后立即进行一次显示
-	rmb1	Timer_Flag
+	smb1	Timer_Flag							; 退出后立即进行一次显示
+	rmb0	Timer_Flag
 	rts
 
 
@@ -481,7 +472,6 @@ L_Ordinal_Exit_CS:
 SwitchState_AlarmSet:
 	lda		#15
 	sta		Return_MaxTime						; 设置模式，15S返回时显
-	jsr		DP_Display_Over						; 清空DP模式和计时，防止回去继续显示DP
 
 	lda		Sys_Status_Flag
 	cmp		#1000B
@@ -512,8 +502,8 @@ L_Change_Ordinal_AS:
 	lda		#0001B
 	sta		Sys_Status_Flag
 L_Ordinal_Exit_AS:
-	smb0	Timer_Flag							; 退出后立即进行一次显示
-	rmb1	Timer_Flag
+	smb1	Timer_Flag							; 退出后立即进行一次显示
+	rmb0	Timer_Flag
 	rts
 
 
@@ -522,11 +512,11 @@ L_Ordinal_Exit_AS:
 ; 切换灯光亮度
 ; 0熄屏，1低亮
 LightLevel_Change:
-	lda		Backlight_Level
+	lda		Light_Level
 	beq		Level0
 
 	lda		#0
-	sta		Backlight_Level
+	sta		Light_Level
 	rmb4	PD									; 低亮
 	rmb0	PC
 	rmb0	PC_IO_Backup
@@ -537,7 +527,7 @@ Level0:
 	rmb0	PC
 	jsr		L_Close_5020						; 熄屏后关闭LCD中断
 	lda		#1
-	sta		Backlight_Level
+	sta		Light_Level
 	smb4	PD									; 下一次亮屏是高亮
 	smb0	PC_IO_Backup						; 设置记忆亮度为高亮，下次唤醒为高亮
 	rmb3	Key_Flag							; 置零屏幕唤醒标志
@@ -591,7 +581,6 @@ DM_SW_TimeMode:
 	eor		#01									; 翻转12/24h模式的状态
 	sta		Clock_Flag
 
-	rmb6	Key_Flag							; 清除DP显示
 	lda		#0
 	sta		Sys_Status_Ordinal					; 如果是轮显模式，切换小时制会回到时显
 
@@ -879,8 +868,8 @@ DateDay_Sub_Exit:
 L_Alarm_Switch:
 	eor		Alarm_Switch
 	sta		Alarm_Switch
-	smb0	Timer_Flag
-	rmb1	Timer_Flag
+	smb1	Timer_Flag
+	rmb0	Timer_Flag
 	jsr		F_Alarm_SwitchStatue				; 刷新一次闹钟开关显示
 	rts
 
@@ -899,8 +888,8 @@ AlarmMin_AddOverflow:
 	lda		#0
 	sta		Alarm_MinAddr,x
 AlarmMin_Add_Exit:
-	smb0	Timer_Flag
-	rmb1	Timer_Flag
+	smb1	Timer_Flag
+	rmb0	Timer_Flag
 	jsr		F_AlarmMin_Set
 	rts
 
@@ -917,8 +906,8 @@ AlarmMin_SubOverflow:
 	lda		#59
 	sta		Alarm_MinAddr,x
 AlarmMin_Sub_Exit:
-	smb0	Timer_Flag
-	rmb1	Timer_Flag
+	smb1	Timer_Flag
+	rmb0	Timer_Flag
 	jsr		F_AlarmMin_Set
 	rts
 
@@ -937,8 +926,8 @@ AlarmHour_AddOverflow:
 	lda		#0
 	sta		Alarm_HourAddr,x
 AlarmHour_Add_Exit:
-	smb0	Timer_Flag
-	rmb1	Timer_Flag
+	smb1	Timer_Flag
+	rmb0	Timer_Flag
 	jsr		F_AlarmHour_Set
 	rts
 
@@ -955,8 +944,8 @@ AlarmHour_SubOverflow:
 	lda		#23
 	sta		Alarm_HourAddr,x
 AlarmHour_Sub_Exit:
-	smb0	Timer_Flag
-	rmb1	Timer_Flag
+	smb1	Timer_Flag
+	rmb0	Timer_Flag
 	jsr		F_AlarmHour_Set
 	rts
 

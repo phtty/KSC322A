@@ -48,19 +48,19 @@ L_Clear_Ram_Loop:
 ; 上电处理
 ; 	rmb4	IER										;  关闭按键中断避免上电过程被打扰
 ; 	lda		#1
-; 	sta		Backlight_Level
+; 	sta		Light_Level
 ; 	smb0	PC										; 初始亮度设置为高亮
 ; 	smb0	PC_IO_Backup
 ; 
-; 	jsr		F_Test_Mode								; 上电显示部分
+ 	jsr		F_Test_Display							; 上电显示部分
 ; 
 ; 	jsr		F_RFC_MeasureStart						; 上电温湿度测量
 ; Wait_RFC_MeasureOver:
 ; 	jsr		F_RFC_MeasureManage
 ; 	bbs0	RFC_Flag,Wait_RFC_MeasureOver
 ; 
-; 	smb0	Timer_Flag
-; 	rmb1	Timer_Flag
+; 	smb1	Timer_Flag
+; 	rmb0	Timer_Flag
 ; 	jsr		F_SymbolRegulate
 ; 	jsr		F_Time_Display
 ; 	jsr		F_Display_Week
@@ -80,24 +80,23 @@ L_Clear_Ram_Loop:
 ; 	sta		Sys_Status_Ordinal
 ; 
 ; 	smb4	IER										;  上电显示完成，重新开启按键中断
-
 	bra		Global_Run
 
 
 ; 状态机
 MainLoop:
-	smb4	SYSCLK
-	sta		HALT									; 休眠
-	rmb4	SYSCLK
+	;smb4	SYSCLK
+	;sta		HALT									; 休眠
+	;rmb4	SYSCLK
 Global_Run:											; 全局生效的功能处理
-	jsr		F_KeyHandler
-	jsr		F_Louding
-	jsr		F_PowerManage
-	jsr		F_Time_Run								; 走时
-	jsr		F_SymbolRegulate
-	jsr		F_Display_Week
-	jsr		F_RFC_MeasureManage
-	jsr		F_ReturnToDisTime						; 定时返回时显模式
+	;jsr		F_KeyHandler
+	;jsr		F_BeepManage
+	;jsr		F_PowerManage
+	;jsr		F_Time_Run								; 走时
+	;jsr		F_SymbolRegulate
+	;jsr		F_Display_Week
+	;jsr		F_RFC_MeasureManage
+	;jsr		F_ReturnToDisTime						; 定时返回时显模式
 
 Status_Juge:
 	bbs0	Sys_Status_Flag,Status_DisClock
@@ -107,35 +106,34 @@ Status_Juge:
 
 	bra		MainLoop
 Status_DisClock:
-	jsr		F_Clock_Display
-	jsr		F_Alarm_Handler							; 显示状态有响闹判断
-	bra		MainLoop
+	;jsr		F_Clock_Display
+	;jsr		F_Alarm_Handler							; 显示状态有响闹判断
+	;bra		MainLoop
 Status_DisAlarm:
-	jsr		F_Alarm_Display
-	jsr		F_Alarm_Handler							; 显示状态有响闹判断
+	;jsr		F_Alarm_Display
+	;jsr		F_Alarm_Handler							; 显示状态有响闹判断
 	bra		MainLoop
 Status_SetClock:
-	jsr		F_Clock_Set
+	;jsr		F_Clock_Set
 	bra		MainLoop
 Status_SetAlarm:
-	jsr		F_Alarm_Set
+	;jsr		F_Alarm_Set
 	bra		MainLoop
 
 
 
 
 F_ReturnToDisTime:
-	bbs7	Clock_Flag,L_Return_Start
+	bbs3	Time_Flag,L_Return_Start
 	rts
 L_Return_Start:
 	bbr0	Sys_Status_Flag,L_Return_Juge
 	bbs0	Sys_Status_Ordinal,L_Return_Juge
-	bbr2	Key_Flag,L_Return_Juge_Exit				; 时显模式下，如果固显，则不继续执行
-	bbs6	Key_Flag,L_Return_Juge_Exit				; DP显示时，不计数
+	nop												; 计时模式下，则不返回
 	lda		#10
 	sta		Return_MaxTime
 L_Return_Juge:
-	rmb7	Clock_Flag
+	rmb3	Time_Flag
 	lda		Return_Counter
 	cmp		Return_MaxTime							; 当前模式的返回时间
 	bcs		L_Return_Stop
@@ -226,7 +224,7 @@ L_EndIrq:
 .include	RFCTable.asm
 .include	TemperHandle.asm
 .include	PowerManage.asm
-.include	TestMode.asm
+.include	TestDisplay.asm
 
 
 .BLKB	0FFFFH-$,0FFH							; 从当前地址到FFFF全部填充0xFF

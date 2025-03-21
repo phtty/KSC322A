@@ -1,8 +1,8 @@
-F_Louding:
-	bbs6	Timer_Flag,L_Beeping
+F_BeepManage:
+	bbs3	Timer_Flag,L_Beeping
 	rts
 L_Beeping:
-	rmb6	Timer_Flag
+	rmb3	Timer_Flag
 
 	lda		Beep_Serial
 	beq		L_NoBeep_Serial_Mode

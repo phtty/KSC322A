@@ -7,10 +7,10 @@ F_RFC_MeasureManage:
 	rmb6	RFC_Flag
 	jsr		F_RFC_MeasureStop					; 采样完成，停止进入DIV中断，关闭RFC测量功能
 RFC_NoComplete:
-	bbr5	RFC_Flag,L_RFC_Exit					; 1S标志，计数30S
-	rmb5	RFC_Flag
+	bbr6	Time_Flag,L_RFC_Exit					; 1S标志，计数15S
+	rmb6	Time_Flag
 	lda		Count_RFC
-	cmp		#30
+	cmp		#15
 	bcs		F_RFC_MeasureStart
 	inc		Count_RFC
 	rts

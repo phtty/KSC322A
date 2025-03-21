@@ -6,19 +6,10 @@ F_Alarm_Display:
 	bne		No_Alarm1_Display
 	jsr		F_DisAL1
 	jsr		F_ClrAL2
-	jsr		F_ClrAL3
 	bra		Alarm_Display_Exit
 No_Alarm1_Display:
-	cmp		#1
-	bne		No_Alarm2_Display
 	jsr		F_ClrAL1
 	jsr		F_DisAL2
-	bra		Alarm_Display_Exit
-No_Alarm2_Display:
-	cmp		#2
-	bne		Alarm_Display_Exit
-	jsr		F_ClrAL2
-	jsr		F_DisAL3
 Alarm_Display_Exit:
 	rts
 
@@ -45,11 +36,11 @@ No_AlarmHourSet_Mode:
 F_Alarm_SwitchStatue:
 	jsr		F_DisCol
 
-	bbs0	Timer_Flag,?AlarmSW_BlinkStart
+	bbs1	Timer_Flag,?AlarmSW_BlinkStart
 	rts
 ?AlarmSW_BlinkStart:
-	rmb0	Timer_Flag
-	bbs1	Timer_Flag,AlarmSW_UnDisplay
+	rmb1	Timer_Flag
+	bbs0	Timer_Flag,AlarmSW_UnDisplay
 	lda		Sys_Status_Ordinal
 	jsr		L_A_Div_3							; Sys_Ordinal除以3得到左移的量
 	txa
@@ -79,7 +70,7 @@ ALSwitch_DisOff:
 	bra		ALSwitch_DisNum
 
 AlarmSW_UnDisplay:
-	rmb1	Timer_Flag
+	rmb0	Timer_Flag
 	jmp		F_UnDisplay_D0_1
 
 ALSwitch_DisNum:								; 显示闹钟序号
@@ -98,10 +89,10 @@ ALSwitch_DisNum:								; 显示闹钟序号
 
 
 F_AlarmHour_Set:
-	bbs0	Timer_Flag,L_AlarmHour_Set
+	bbs1	Timer_Flag,L_AlarmHour_Set
 	rts
 L_AlarmHour_Set:
-	rmb0	Timer_Flag
+	rmb1	Timer_Flag
 
 	jsr		F_DisCol
 
@@ -115,13 +106,13 @@ L_AlarmHour_Set:
 Alarm_Serial_HourOut:
 	sta		Sys_Status_Ordinal					; 为了调用显示闹钟函数，子模式序号改为闹钟显示模式
 
-	bbs3	Timer_Flag,L_AlarmHour_Display		; 有快加时常亮
-	bbs1	Timer_Flag,L_AlarmHour_Clear
+	bbs2	Key_Flag,L_AlarmHour_Display		; 有快加时常亮
+	bbs0	Timer_Flag,L_AlarmHour_Clear
 L_AlarmHour_Display:
 	jsr		F_Display_Alarm
 	bra		AlarmHour_Set_Exit
 L_AlarmHour_Clear:
-	rmb1	Timer_Flag							; 清1S标志
+	rmb0	Timer_Flag							; 清1S标志
 	jsr		F_UnDisplay_D0_1
 AlarmHour_Set_Exit:
 	pla
@@ -132,10 +123,10 @@ AlarmHour_Set_Exit:
 
 
 F_AlarmMin_Set:
-	bbs0	Timer_Flag,L_AlarmMin_Set
+	bbs1	Timer_Flag,L_AlarmMin_Set
 	rts
 L_AlarmMin_Set:
-	rmb0	Timer_Flag
+	rmb1	Timer_Flag
  
 	jsr		F_DisCol
 
@@ -147,13 +138,13 @@ L_AlarmMin_Set:
 	ror
 	sta		Sys_Status_Ordinal					; 为了调用显示闹钟函数，子模式序号改为闹钟显示模式
 
-	bbs3	Timer_Flag,L_AlarmMin_Display		; 有快加时直接常亮
-	bbs1	Timer_Flag,L_AlarmMin_Clear
+	bbs2	Key_Flag,L_AlarmMin_Display		; 有快加时直接常亮
+	bbs0	Timer_Flag,L_AlarmMin_Clear
 L_AlarmMin_Display:
 	jsr		F_Display_Alarm
 	bra		AlarmMin_Set_Exit
 L_AlarmMin_Clear:
-	rmb1	Timer_Flag							; 清1S标志
+	rmb0	Timer_Flag							; 清1S标志
 	jsr		F_UnDisplay_D2_3
 AlarmMin_Set_Exit:
 	pla
@@ -175,8 +166,8 @@ L_No_Alarm_Process:
 	rmb3	PB_TYPE								; PB3选择NMOS输出1避免漏电
 	smb3	PB
 
-	rmb6	Timer_Flag
-	rmb7	Timer_Flag
+	rmb3	Timer_Flag
+	rmb1	Time_Flag
 L_LoudingNoClose:
 	lda		#0
 	sta		AlarmLoud_Counter
@@ -213,7 +204,7 @@ L_Snooze:
 	bne		L_Snooze_CloseLoud
 L_AlarmTrigger:
 	jsr		F_RFC_Abort							; 终止RFC采样并配置定时器为响闹模式
-	smb7	Timer_Flag
+	smb1	Time_Flag
 	smb0	TMRC								; 响铃定时器TIM0开启
 	smb2	Clock_Flag							; 开启响闹模式
 	rmb1 	Clock_Flag							; 关闭闹钟触发标志，避免重复进闹钟触发
@@ -247,8 +238,8 @@ L_CloseLoud:
 	rmb3	PB_TYPE								; PB3选择NMOS输出1避免漏电
 	smb3	PB
 
-	rmb6	Timer_Flag
-	rmb7	Timer_Flag
+	rmb3	Timer_Flag
+	rmb1	Time_Flag
 	rmb0	TMRC
 L_LoudingJuge_Exit:
 	rts
@@ -257,10 +248,10 @@ L_LoudingJuge_Exit:
 
 
 L_Alarm_Process:
-	bbs7	Timer_Flag,L_BeepStart				; 每响铃1S进一次
+	bbs1	Time_Flag,L_BeepStart				; 每响铃1S进一次
 	rts
 L_BeepStart:
-	rmb7	Timer_Flag
+	rmb1	Time_Flag
 	lda		AlarmLoud_Counter
 	cmp		#60
 	beq		L_NoSnooze_CloseLoud				; 响铃60S后关闭响闹
@@ -370,10 +361,10 @@ Alarm3_SecMatch:
 ; 确定闹钟触发后的处理，若当前在贪睡，则要重置贪睡状态
 L_Alarm_Match_Handle:
 	jsr		L_NoSnooze_CloseLoud
-	bbs4	Clock_Flag,Alarm_Blocked
+	bbs4	Time_Flag,Alarm_Blocked
 	smb1	Clock_Flag							; 同时满足小时和分钟的匹配，设置闹钟触发
 Alarm_Blocked:
-	smb4	Clock_Flag							; 闹钟触发后，阻塞下一次1S内的闹钟触发
+	smb4	Time_Flag							; 闹钟触发后，阻塞下一次1S内的闹钟触发
 	rts
 
 

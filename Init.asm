@@ -33,56 +33,60 @@ F_Init_SystemRam:								; 系统内存初始化
 	;lda		#00
 	;sta		R_Date_Week
 
-	lda		#29
-	sta		Count_RFC
+	smb1	Backlight_Flag						; 上电亮屏
+
+	lda		#15
+	sta		Count_RFC							; RFC采样间隔
+
+	lda		#0
+	sta		Light_Level							; 初始亮度
 
 	rts
 
 
 F_Beep_Init:
-	lda		#C_T000_Fsub
-	sta		PADF1
-	rmb0	TMCLK								; TIM0选择时钟源为Fsub
-	rmb1	TMCLK
+	;lda		#C_T000_Fsub
+	;sta		PADF1
+	;rmb0	TMCLK								; TIM0选择时钟源为Fsub
+	;rmb1	TMCLK
 
-	lda		#256-8								; 配置TIM0频率为4096Hz
-	sta		TMR0
+	;lda		#256-8								; 配置TIM0频率为4096Hz
+	;sta		TMR0
 
 	rmb3	PB_TYPE								; PB3选择NMOS输出0避免漏电
 
-	rmb1	PADF0								; PB3 PWM输出控制，初始化不输出
-	rmb3	PADF0								; 配置PB3的PWM输出模式，频率为TIM0/2
-	smb4	PADF0
+	;rmb1	PADF0								; PB3 PWM输出控制，初始化不输出
+	;rmb3	PADF0								; 配置PB3的PWM输出模式，频率为TIM0/2
+	;smb4	PADF0
 
 	rts
 
 
 F_Port_Init:
-	lda		#$1c								; PA5不需要唤醒
+	lda		#$3c								; PA2~5设置为上拉输入，并且设置中断唤醒
 	sta		PA_WAKE
-	lda		#$1c
+	lda		#$3c
 	sta		PA_DIR
-	lda		#$1c
+	lda		#$3c
 	sta		PA
 	smb4	IER									; 打开PA口外部中断
 
-	lda		#$0
-	sta		PC_DIR								; PC配置为输出
+	lda		#$20
+	sta		PC_DIR								; PC5配置为三态输入，其他输出0
 	lda		#$0
 	sta		PC
 
-	lda		PB
+	lda		PB									; PB3配置为推挽输出
 	and		#$b7
 	sta		PB
+	lda		PB_TYPE
+	ora		#$8
 
-	lda		#$07
-	sta		PD_DIR								; PD0-3配置为三态输入，其余为输出
+	lda		#$17
+	sta		PD_DIR								; PD0~2、4配置为三态输入，其余为输出
 	lda		#$00
 	sta		PD
 	sta		PD_SEG								; PD口全部作IO口使用
-
-	lda		#C_PB2S								; PB2作PP声音输出
-	sta		PADF0
 
 	rts
 
@@ -95,34 +99,26 @@ F_Timer_Init:
 	rmb0	TMRC								; 关闭TMR0
 	rmb1	TMRC								; 关闭TMR1
 
-	lda		#C_TMR1_Fsub_64+C_TMR0_Fsub			; TIM0时钟源T000
-	sta		TMCLK								; TIM1时钟源Fsub/64(512Hz)
-	lda		#C_T000_Fsub
-	sta		PADF1								; T000选择为Fsub
+	lda		#C_DIVC_Fsub_4
+	sta		DIVC								; DIV时钟源为Fsub/4(8192Hz)
 
-	; TIM2时钟源DIV,Fsub 64分频512Hz，关闭定时器同步
-	lda		#C_Asynchronous+C_DIVC_Fsub_32
-	sta		DIVC								; 关闭定时器同步，DIV时钟源为Fsub/32(1024Hz)
-
-	lda		#256-8								; 配置TIM0频率为4096Hz
-	sta		TMR0
-	lda		#$0
-	sta		TMR2
-
-	lda		#256-32								; 16Hz一次中断
-	sta		TMR1
-
-	lda		IER									; 开定时器中断
-	ora		#C_TMR0I+C_TMR1I+C_TMR2I+C_LCDI
-	sta		IER
-
+	; TIM2时钟源DIV,Fsub 4分频8192Hz
+	lda		#256-8
+	sta		TMR2								; Tim2中断频率配置为1024Hz
 	lda		#C_TMR2ON
-	sta		TMRC								; 初始化只开TIM2用于走时
+	sta		TMRC								; 开启TIM2
 
-	lda		#C_COM_2_42_38+C_LCDIS_Rate
-	sta		LCD_COM								; 开LCD中断用于定时显示LED
-	lda		#$02
+	lda		#C_COM_8_36_32+C_LCDIS_Rate_2		; 配置为8COM，LCD中断时钟源二分频
+	sta		LCD_COM
+	lda		#$0f
 	sta		FRAME
+
+	lda		#0
+	sta		IFR									; 清理中断标志位
+	lda		IER									; Tim2定时器中断用于PWM调光、按键扫描、蜂鸣间隔、快加频率
+;	ora		#C_TMR2I+C_LCDI+C_DIVI				; LCD中断用于2Hz、1Hz的半S处理、1S处理和走时
+	ora		#C_LCDI+C_TMR2I
+	sta		IER									; DIV中断用于红外接收、响闹时钟源，RFC测量计时
 
 	rts
 
@@ -203,7 +199,7 @@ F_KeyMatrix_PC5Scan_Ready:
 	rts
 
 F_KeyMatrix_Reset:
-	bbs3	Timer_Flag,L_QuikAdd_ScanReset
+	bbs2	Key_Flag,L_QuikAdd_ScanReset
 F_QuikAdd_Scan:
 	rmb4	PC
 	rmb5	PC
