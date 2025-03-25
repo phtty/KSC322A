@@ -46,3 +46,36 @@ LED_SET_HIGH	MACRO
 	ora		#$01
 	sta		PC
 	ENDM
+
+
+IR_RISING_EDGE_JUGE	MACRO
+	lda		PD
+	and		#$10
+	beq		?No_RisingEdge
+	lda		PD_IO_Backup
+	and		#$10
+	bne		?No_RisingEdge
+	smb0	IR_Flag
+	bra		?RisingEdge_JugeExit
+?No_RisingEdge:
+	rmb0	IR_Flag
+?RisingEdge_JugeExit:
+	lda		PD
+	sta		PD_IO_Backup					; 同步PD口当前状态和历史状态，用于判断上升下降沿
+	ENDM
+
+IR_FALLING_EDGE_JUGE	MACRO
+	lda		PD
+	and		#$10
+	bne		?No_FallingEdge
+	lda		PD_IO_Backup
+	and		#$10
+	beq		?No_FallingEdge
+	smb1	IR_Flag
+	bra		?FallingEdge_JugeExit
+?No_FallingEdge:
+	rmb1	IR_Flag
+?FallingEdge_JugeExit:
+	lda		PD
+	sta		PD_IO_Backup					; 同步PD口当前状态和历史状态，用于判断上升下降沿
+	ENDM

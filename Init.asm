@@ -45,13 +45,6 @@ F_Init_SystemRam:								; 系统内存初始化
 
 
 F_Beep_Init:
-	;lda		#C_T000_Fsub
-	;sta		PADF1
-	;rmb0	TMCLK								; TIM0选择时钟源为Fsub
-	;rmb1	TMCLK
-
-	;lda		#256-8								; 配置TIM0频率为4096Hz
-	;sta		TMR0
 	lda		PB									; PB3配置为输出0
 	and		#$f7
 	sta		PB
@@ -85,9 +78,12 @@ F_Port_Init:
 
 	lda		#$17
 	sta		PD_DIR								; PD0~2、4配置为三态输入，其余为输出
-	lda		#$00
+	lda		#$10
 	sta		PD
 	sta		PD_SEG								; PD口全部作IO口使用
+
+	lda		PD
+	sta		PD_IO_Backup						; 同步PD口当前状态和历史状态
 
 	rts
 
@@ -124,49 +120,8 @@ F_Timer_Init:
 
 
 
-F_Timer_NormalMode:
-	rmb1	IER									; 关TMR0、1定时器中断
-	rmb1	IFR									; 清除TMR0、1中断标志位
-	rmb2	IER
-	rmb2	IFR
-	lda		TMRC
-	pha
-	rmb0	TMRC								; 关闭TMR0
-	rmb1	TMRC								; 关闭TMR1
-	lda		#C_TMR1_Fsub_64+C_TMR0_Fsub			; TIM0时钟源T000
-	sta		TMCLK								; TIM1时钟源Fsub/64(512Hz)
-	lda		#C_T000_Fsub
-	sta		PADF1								; T000选择为Fsub
-	lda		#C_Asynchronous+C_DIVC_Fsub_64
-	sta		DIVC								; 关闭定时器同步并选择DIV时钟源为Fsub/64(512Hz)
-
-	lda		#256-8								; 配置TIM0频率为4096Hz
-	sta		TMR0
-	lda		#256-32								; 配置TIM1频率为16Hz
-	sta		TMR1
-
-	pla
-	sta		TMRC
-
-	rmb0	IER									; 关闭DIV中断
-	smb1	IER									; 开TIM0、1定时器中断
-	smb2	IER
-
-	rmb0	RFC_Flag							; 清除采样启用中标志位
-	rmb3	RFC_Flag
-	rmb6	RFC_Flag
-
-	rts
-
-
-
 
 F_RFC_Init:
-	lda		#$0f
-	sta		PD_DIR								; PD0-4配置为三态输入，其余为输出
-	lda		#$0
-	sta		PD
-
 	rmb6	PC_SEG
 
 	lda		RFCC0								; PD0-3配置为RFC功能
@@ -177,34 +132,4 @@ F_RFC_Init:
 	sta		RFCC1								; 关闭RFC测量功能
 	sta		PD_SEG								; PD口全部作IO口使用
 
-	rts
-
-
-F_KeyMatrix_PC4Scan_Ready:
-	;rmb4	IER									; 关闭PA口中断，避免误触发中断
-
-	rmb4	PC
-	smb5	PC
-	rmb4	IFR									; 复位标志位,避免中断开启时直接进入中断服务
-	jsr		L_KeyDelay
-	rts
-
-F_KeyMatrix_PC5Scan_Ready:
-	;rmb4	IER									; 关闭PA口中断，避免误触发中断
-
-	smb4	PC
-	rmb5	PC
-	rmb4	IFR									; 复位标志位,避免中断开启时直接进入中断服务
-	jsr		L_KeyDelay
-	rts
-
-F_KeyMatrix_Reset:
-	bbs2	Key_Flag,L_QuikAdd_ScanReset
-F_QuikAdd_Scan:
-	rmb4	PC
-	rmb5	PC
-	rts
-L_QuikAdd_ScanReset:							; 有长按时PC4,PC5输出高，避免长按时漏电
-	smb4	PC
-	smb5	PC									; 快加下不需要开启中断，定时扫描IO口即可
 	rts

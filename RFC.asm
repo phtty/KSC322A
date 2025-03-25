@@ -20,8 +20,7 @@ F_RFC_MeasureStart:
 	sta		RFC_ChannelCount					; 采样开始，清除通道计数
 
 	smb0	RFC_Flag
-	rmb0	IFR									; 清除DIV中断标志位
-	smb0	IER									; 打开DIV中断
+	smb5	Timer_Switch						; 打开50Hz计时
 
 L_RFC_Exit:
 	rts
@@ -91,7 +90,11 @@ F_RFC_TimerReset:								; 等待下一通道采样开始，重置定时器状态
 
 
 F_RFC_MeasureStop:
-	jsr		F_Timer_NormalMode					; 定时器配置为响铃和长按状态,关闭定时器同步
+	rmb0	RFC_Flag							; 清除采样启用中标志位
+	rmb3	RFC_Flag
+	rmb6	RFC_Flag
+
+	rmb5	Timer_Switch						; 关闭50Hz计时
 
 	jsr		L_Temper_Handle
 	jsr		F_Display_Temper					; 数据处理后，显示温度和湿度
@@ -113,7 +116,11 @@ L_CLR_RFC:
 ; 此时需要禁用RFC采样直到此功能结束
 F_RFC_Abort:
 	smb1	RFC_Flag							; 禁用RFC采样
-	jsr		F_Timer_NormalMode					; 定时器配置为响铃和长按状态,关闭定时器同步
+	rmb0	RFC_Flag							; 清除采样启用中标志位
+	rmb3	RFC_Flag
+	rmb6	RFC_Flag
+
+	rmb5	Timer_Switch						; 关闭50Hz计时
 
 	jsr		L_CLR_RFC
 	sta		RFC_ChannelCount					; 重置通道计数

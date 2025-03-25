@@ -3,8 +3,10 @@
 ; RAM Address
 ;***************************************
 RamStarAddr		EQU		1800H											;RAM的开始地址
+
 LED_RamAddr		EQU		RamStarAddr+LED_Addr-Page0RamStarAddr			;LED RAM的地址
-LED_RamBKAddr	EQU		RamStarAddr+LED_Addr_BK-Page0RamStarAddr		;LED RAM的地址
+LED_BakRamAddr	EQU		RamStarAddr+LED_Addr_BK-Page0RamStarAddr		;LED_BK RAM的地址
+IR_RamAddr		EQU		RamStarAddr+IR_Code_Addr-Page0RamStarAddr		;IR_Code的地址
 Time_Addr		EQU		RamStarAddr+Time_Str_Addr-Page0RamStarAddr		;事件相关数据的地址
 Alarm_MinAddr	EQU		RamStarAddr+Alarm_Min_Addr-Page0RamStarAddr		;闹钟组分钟数据地址
 Alarm_HourAddr	EQU		RamStarAddr+Alarm_Hour_Addr-Page0RamStarAddr	;闹钟组小时数据地址
@@ -21,6 +23,13 @@ LED_Ram					DS		12
 
 LED_Addr_BK				EQU		$
 LED_Ram_BK				DS		12
+
+; IR解码缓存
+IR_Code_Addr			EQU		$
+A_Code					DS		1
+IA_Code					DS		1
+D_Code					DS		1
+ID_Code					DS		1
 
 R_Int_Backup			DS		1
 
@@ -41,6 +50,11 @@ Backlight_Counter		DS		1
 Return_Counter			DS		1
 Return_MaxTime			DS		1
 AlarmLoud_Counter		DS		1
+IR_Counter				DS		1
+Code_Counter			DS		1
+Repeat_Coutner			DS		1
+Counter_Bak				DS		1
+Counter_Bak2			DS		1
 
 Calendar_Flag			DS		1
 ;bit0 = 1 闰年
@@ -55,7 +69,6 @@ Clock_Flag				DS		1
 ;bit4 = 1 
 ;bit5	  上次的响闹模式，判断是响闹结束还是未响闹
 ;bit6 = 1 贪睡按键触发导致的响闹结束
-
 
 Timer_Flag				DS		1
 ;bit0 = 1 1Hz标志
@@ -127,12 +140,33 @@ RFC_Flag				DS		1
 ;bit5 = 1
 ;bit6 = 1 温湿度测量完成标志
 
+IR_Flag					DS		1
+;bit0 = 1 检测到上升沿
+;bit1 = 1 检测到下降沿
+;bit2 = 1 开始解码标志
+;bit3 = 1 开始计数标志
+;bit4 = 1 接收完成
+;bit5 = 1 终止标记
+
+IR_Test					DS		1
+;bit0 = 1 阶段1终止
+;bit1 = 1 阶段2终止
+;bit2 = 1 阶段3终止
+;bit3 = 1 阶段3终止
+
+IR_ReceivePhase			DS		1
+;0	接收阶段0，等待引导码/重复码到来
+;1	接收阶段1，引导码/重复码的第一个电平
+;2	接收阶段2，引导码/重复码的第二个电平
+;3	接收阶段3，码元的第一个电平
+;4	接收阶段4，码元的第二个电平
+
 Backlight_Flag			DS		1
 ;bit0 = 1 DC5V接入时唤醒
 ;bit1 = 1 亮屏标志
 ;bit2 = 1 手动进入熄屏模式
 
-Light_Level			DS		1	; 亮度等级
+Light_Level				DS		1	; 亮度等级
 ;0 低亮
 ;1 半亮
 ;2 高亮
@@ -191,7 +225,6 @@ R_Alarm3_Hour			DS		1	;闹钟3小时
 
 R_Snooze_Min			DS		1	;贪睡闹钟分钟
 R_Snooze_Hour			DS		1	;贪睡闹钟小时
-CC0						DS		1
 
 ;---------------------------------------       
 P_Temp					DS		8

@@ -175,7 +175,7 @@ L_Send_DRAM:
 	dex
 	php
 	lda		LED_RamAddr,x				; 12byte的显存全部拷贝
-	sta		LED_RamBKAddr,x
+	sta		LED_BakRamAddr,x
 	plp
 	bne		?Loop_Start
 
@@ -187,7 +187,7 @@ L_Sending_Loop:							; 5020是MSB，使用左移先发送高位
 	php
 ?Loop_ROL:
 	plp
-	rol		LED_RamBKAddr,x
+	rol		LED_BakRamAddr,x
 	php									; 保存位移出来的C位
 	inx
 	cpx		#12

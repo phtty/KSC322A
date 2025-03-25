@@ -15,7 +15,7 @@ L_DisTime_Min:
 	jsr		L_LSR_4Bit
 	ldx		#led_d2
 	jsr		L_Dis_7Bit_DigitDot
-	rts	
+	rts
 
 L_DisTime_Hour:									; 显示小时
 	bbr0	Clock_Flag,L_24hMode_Time
@@ -55,7 +55,7 @@ L_Start_DisTime_Hour:
 L_Hour_Tens_NoZero:
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
-	rts 
+	rts
 
 
 
@@ -92,7 +92,7 @@ AlarmMin_Display_Start:
 	jsr		L_LSR_4Bit
 	ldx		#led_d2
 	jsr		L_Dis_7Bit_DigitDot
-	rts	
+	rts
 
 L_DisAlarm_Hour:								; 显示闹钟小时
 	lda		Sys_Status_Ordinal					; 判断要显示三组闹钟的哪一个

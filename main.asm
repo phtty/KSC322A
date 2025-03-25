@@ -20,15 +20,13 @@ V_RESET:
 	lda		#$07									; #$97
 	sta		SYSCLK									; 设置系统时钟
 
-	lda		#00										; 清整个RAM
+	lda		#00										; 复位RAM到0
 	ldx		#$ff
 	sta		$1800
 L_Clear_Ram_Loop:
 	sta		$1800,x
 	dex
 	bne		L_Clear_Ram_Loop
-
-	jsr		F_ClearScreen							; 清显存
 
 	lda		#$0
 	sta		DIVC									; 分频控制器，定时器与DIV异步
@@ -45,6 +43,8 @@ L_Clear_Ram_Loop:
 
 	cli												; 开总中断
 
+	jsr		L_Send_DRAM
+
 ; 上电处理
 ; 	rmb4	IER										;  关闭按键中断避免上电过程被打扰
 ; 	lda		#1
@@ -52,13 +52,13 @@ L_Clear_Ram_Loop:
 ; 	smb0	PC										; 初始亮度设置为高亮
 ; 	smb0	PC_IO_Backup
 ; 
- 	jsr		F_Test_Display							; 上电显示部分
-	lda		#$02
-	sta		Beep_Serial
-	smb4	Key_Flag
-	smb3	Timer_Switch
+ 	;jsr		F_Test_Display							; 上电显示部分
+	;lda		#$02
+	;sta		Beep_Serial
+	;smb4	Key_Flag
+	;smb3	Timer_Switch
 
-; 	jsr		F_RFC_MeasureStart						; 上电温湿度测量
+; 	jsr		F_RFC_MeasureStart						; 上电温度测量
 ; Wait_RFC_MeasureOver:
 ; 	jsr		F_RFC_MeasureManage
 ; 	bbs0	RFC_Flag,Wait_RFC_MeasureOver
@@ -89,11 +89,17 @@ L_Clear_Ram_Loop:
 
 ; 状态机
 MainLoop:
+	lda		PC
+	and		#$20
+	bne		Global_Run
 	;smb4	SYSCLK
 	;sta		HALT									; 休眠
 	;rmb4	SYSCLK
 Global_Run:											; 全局生效的功能处理
 	;jsr		F_KeyHandler
+	jsr		IR_Test_1
+	jsr		IR_Test_2
+	jsr		F_IR_Decode								; 红外解码
 	jsr		F_BeepManage
 	;jsr		F_PowerManage
 	;jsr		F_Time_Run								; 走时
@@ -133,7 +139,7 @@ F_ReturnToDisTime:
 L_Return_Start:
 	bbr0	Sys_Status_Flag,L_Return_Juge
 	bbs0	Sys_Status_Ordinal,L_Return_Juge
-	nop												; 计时模式下，则不返回
+	nop												; 正倒计时模式下，则不返回
 	lda		#10
 	sta		Return_MaxTime
 L_Return_Juge:
@@ -148,7 +154,7 @@ L_Return_Stop:
 	sta		Return_Counter
 	bbr0	Sys_Status_Flag,No_TimeDis_Return		; Sys Flag第一位为0则不是时显
 	bbs0	Sys_Status_Ordinal,No_TimeDis_Return	; Sys Ordinal不为0则不是时显
-	jsr		SwitchState_ClockDis					; 时显下若有轮显，则计时结束返回日显
+	;jsr		SwitchState_ClockDis					; 时显下若有轮显，则计时结束返回日显
 	bra		L_Return_Juge_Exit
 
 No_TimeDis_Return:
@@ -229,6 +235,8 @@ L_EndIrq:
 .include	TemperHandle.asm
 .include	PowerManage.asm
 .include	TestDisplay.asm
+.include	infrared.asm
+.include	IR_Table.asm
 
 
 .BLKB	0FFFFH-$,0FFH							; 从当前地址到FFFF全部填充0xFF

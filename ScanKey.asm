@@ -20,7 +20,6 @@ L_Key4Hz:
 L_KeyScan:										; 长按处理部分
 	bbr0	Key_Flag,L_KeyNoScanExit			; 没有扫键标志则为无按键处理了，判断是否取消禁用RFC采样
 
-	jsr		F_QuikAdd_Scan						; 矩阵扫描，需要开启IO口
 	bbr4	Timer_Flag,L_KeyScanExit			; 没开始快加时，用16Hz扫描
 	rmb4	Timer_Flag
 	lda		PA
@@ -48,7 +47,6 @@ NoQuikAdd_Beep:
 
 
 L_KeyHandle:
-	jsr		F_KeyMatrix_PC5Scan_Ready			; 判断Down键和Backlight键
 	lda		PA
 	eor		#$3c								; 按键是反逻辑的，将指定的几位按键口取反
 	and		#$3c
@@ -77,7 +75,6 @@ L_KeyExit:
 	sta		QuickAdd_Counter
 	sta		SpecialKey_Flag
 	sta		Counter_DP
-	jsr		F_KeyMatrix_Reset
 	rmb4	IFR									; 复位标志位,避免中断开启时直接进入中断服务
 	smb4	IER									; 按键处理结束，重新开启PA口中断
 L_KeyScanExit:
@@ -318,7 +315,6 @@ L_Key_NoSnoozeLoud:
 ; 同时会给出是否存在唤醒事件
 ; 由于打断贪睡和响闹的功能B键没有，故不在本函数内处理
 L_Universal_TriggerHandle:
-	jsr		F_KeyMatrix_Reset					; 按键矩阵的GPIO状态重置
 	lda		#0
 	sta		Return_Counter						; 重置返回时显模式计时
 

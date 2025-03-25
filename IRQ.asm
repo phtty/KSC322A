@@ -1,6 +1,9 @@
 I_DivIRQ_Handler:
-	nop										; 红外接收
+	jsr		IR_ReceiveHandle				; 红外接收
 
+	bbr3	IR_Flag,L_4096Hz_Juge			; IR计数开关，用于计算两边沿之间的间隔
+	inc		IR_Counter
+L_4096Hz_Juge:
 	bbr7	Timer_Switch,L_50Hz_Juge		; 4096Hz计数开关
 	lda		Counter_4096Hz
 	eor		#$01
@@ -30,12 +33,12 @@ RFC_Sample:
 
 
 I_Timer0IRQ_Handler:
-
+	nop										; 未使用Tim0中断
 	jmp		L_EndIrq
 
 
 I_Timer1IRQ_Handler:
-
+	nop										; 未使用Tim1中断
 	jmp		L_EndIrq
 
 
