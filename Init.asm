@@ -54,9 +54,9 @@ F_Beep_Init:
 F_Port_Init:
 	lda		#$3c								; PA2~5设置为上拉输入，并且设置中断唤醒
 	sta		PA_WAKE
-	lda		#$3c
+	lda		#$2c
 	sta		PA_DIR
-	lda		#$3c
+	lda		#$2c
 	sta		PA
 	smb4	IER									; 打开PA口外部中断
 

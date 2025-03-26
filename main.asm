@@ -89,18 +89,19 @@ L_Clear_Ram_Loop:
 
 ; 状态机
 MainLoop:
-	lda		PC
-	and		#$20
-	bne		Global_Run
+	;lda		PC
+	;and		#$20
+	;bne		Global_Run
 	;smb4	SYSCLK
 	;sta		HALT									; 休眠
 	;rmb4	SYSCLK
 Global_Run:											; 全局生效的功能处理
 	;jsr		F_KeyHandler
+	jsr		IR_Receive_Loop							; 红外接收
 	jsr		IR_Test_1
 	jsr		IR_Test_2
 	jsr		F_IR_Decode								; 红外解码
-	jsr		F_BeepManage
+	;jsr		F_BeepManage
 	;jsr		F_PowerManage
 	;jsr		F_Time_Run								; 走时
 	;jsr		F_SymbolRegulate

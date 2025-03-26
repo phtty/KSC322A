@@ -117,31 +117,31 @@ KeyD_LowLight:
 
 
 L_Close_5020:
-	rmb6	IER
-	lda		PC
-	and		#$0f
-	sta		PC_IO_Backup
-	lda		PC
-	and		#$f0
-	sta		PC
-
-	lda		PD
-	and		#$e0
-	sta		PD_IO_Backup
-	lda		PD
-	and		#$1f
-	sta		PD
+;	rmb6	IER
+;	lda		PC
+;	and		#$0f
+;	sta		PC_IO_Backup
+;	lda		PC
+;	and		#$f0
+;	sta		PC
+;
+;	lda		PD
+;	and		#$e0
+;	sta		PD_IO_Backup
+;	lda		PD
+;	and		#$1f
+;	sta		PD
 	rts
 
 L_Open_5020:
-	lda		PC
-	and		#$f0
-	ora		PC_IO_Backup
-	sta		PC
-
-	lda		PD
-	and		#$1f
-	ora		PD_IO_Backup
-	sta		PD
-	smb6	IER
+;	lda		PC
+;	and		#$f0
+;	ora		PC_IO_Backup
+;	sta		PC
+;
+;	lda		PD
+;	and		#$1f
+;	ora		PD_IO_Backup
+;	sta		PD
+;	smb6	IER
 	rts

@@ -1,12 +1,4 @@
 I_DivIRQ_Handler:
-	jsr		IR_ReceiveHandle				; 红外接收
-
-	lda		IR_Counter
-	cmp		#100
-	bcc		IR_No_Overflow
-	jsr		Receive_Abort
-IR_No_Overflow:
-
 	bbr3	IR_Flag,L_4096Hz_Juge			; IR计数开关，用于计算两边沿之间的间隔
 	inc		IR_Counter
 L_4096Hz_Juge:

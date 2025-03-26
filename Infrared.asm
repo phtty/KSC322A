@@ -88,7 +88,11 @@ Phase2_NoGuid:
 	lda		#20
 	cmp		IR_Counter
 	bcc		Phase2_Abort					; 也非重复码，终止收码
-	inc		Repeat_Coutner					; 收到重复码则递增重复码计数
+	inc		Repeat_Coutner					; 收到重复码递增重复码计数
+	lda		#0
+	sta		IR_ReceivePhase
+	sta		IR_Counter
+	rmb3	IR_Flag
 	rts
 Phase2_Abort:
 	bbs5	IR_Flag,?No_Mark
@@ -107,10 +111,10 @@ IR_Receive_Phase_3:
 	bbs0	IR_Flag,?IR_FirstCode_Juge
 	rts
 ?IR_FirstCode_Juge:
-	lda		IR_Counter
-	cmp		#2
-	bcc		Phase3_Abort					; 终止收码
-	lda		#6
+	;lda		IR_Counter
+	;cmp		#2
+	;bcc		Phase3_Abort					; 终止收码
+	lda		#7
 	cmp		IR_Counter
 	bcc		Phase3_Abort
 	lda		#4
@@ -138,16 +142,16 @@ IR_Receive_Phase_4:
 	lda		IR_Counter
 	cmp		#2
 	bcc		Phase4_No0Code					; 非0码
-	lda		#6
+	lda		#7
 	cmp		IR_Counter
 	bcc		Phase4_No0Code
 	clc										; 入队0码
 	jmp		Receive_AfterHandle				; 收码1bit的后处理
 Phase4_No0Code:
 	lda		IR_Counter
-	cmp		#11
+	cmp		#9
 	bcc		Phase4_Abort					; 也非1码，终止收码
-	lda		#15
+	lda		#20
 	cmp		IR_Counter
 	bcc		Phase4_Abort					; 也非1码，终止收码
 	sec										; 入队1码
@@ -166,12 +170,13 @@ Phase4_Abort:
 Receive_Abort:
 	lda		#0
 	sta		IR_ReceivePhase
-	sta		IR_Flag
+	sta		IR_Counter						; 清空计数
 	sta		ID_Code							; 清空解码缓冲区
 	sta		D_Code
 	sta		IA_Code
 	sta		A_Code
-	smb5	IR_Flag
+	lda		#%00100000
+	sta		IR_Flag
 	rts
 
 
@@ -192,9 +197,20 @@ Receive_AfterHandle:
 Receive_Complete:
 	lda		#0
 	sta		IR_ReceivePhase					; 收码阶段重置为阶段0
-	lda		#%00000100						; 复位相关标志位并打开解码标志位
+	sta		IR_Counter						; 清空计数
+	lda		#%00010100						; 复位相关标志位并打开解码标志位
 	sta		IR_Flag
-	smb4	IR_Flag
+	rts
+
+
+
+IR_Receive_Loop:
+	jsr		IR_ReceiveHandle						; 红外接收
+	bbs4	IR_Flag,No_IR_Receiveing
+	lda		IR_Test
+	bne		No_IR_Receiveing
+	bra		IR_Receive_Loop							; 若当前接收阶段非0，则循环接收直到结束
+No_IR_Receiveing:
 	rts
 
 
@@ -482,6 +498,7 @@ Receive_Complete_1:
 	jsr		L_Send_DRAM
 	rts
 
+
 IR_Test_2:
 	lda		IR_Test
 	bne		Receive_Abort_1
@@ -554,20 +571,19 @@ Juge_Over:
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
 
-	;lda		#32
-	;sec
-	;sbc		Counter_Bak2
-	;jsr		L_A_DecToHex
-	;pha
-	;and		#$0f
-	;ldx		#led_d6
-	;jsr		L_Dis_7Bit_DigitDot
-	;pla
-	;and		#$f0
-	;jsr		L_LSR_4Bit
-	;ldx		#led_d5
-	;jsr		L_Dis_7Bit_DigitDot
-	
+	lda		#32
+	sec
+	sbc		Counter_Bak2
+	jsr		L_A_DecToHex
+	pha
+	and		#$0f
+	ldx		#led_d6
+	jsr		L_Dis_7Bit_DigitDot
+	pla
+	and		#$f0
+	jsr		L_LSR_4Bit
+	ldx		#led_d5
+	jsr		L_Dis_7Bit_DigitDot
 
 	jsr		L_Send_DRAM
 ?Test_Over
