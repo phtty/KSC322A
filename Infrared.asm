@@ -30,6 +30,7 @@ IR_Turn2Phase1:
 
 	lda		#0
 	sta		IR_Counter						; 初始化变量
+	sta		T_Temp
 	lda		#32
 	sta		Code_Counter
 	rts
@@ -553,19 +554,20 @@ Juge_Over:
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
 
-	lda		#32
-	sec
-	sbc		Counter_Bak2
-	jsr		L_A_DecToHex
-	pha
-	and		#$0f
-	ldx		#led_d6
-	jsr		L_Dis_7Bit_DigitDot
-	pla
-	and		#$f0
-	jsr		L_LSR_4Bit
-	ldx		#led_d5
-	jsr		L_Dis_7Bit_DigitDot
+	;lda		#32
+	;sec
+	;sbc		Counter_Bak2
+	;jsr		L_A_DecToHex
+	;pha
+	;and		#$0f
+	;ldx		#led_d6
+	;jsr		L_Dis_7Bit_DigitDot
+	;pla
+	;and		#$f0
+	;jsr		L_LSR_4Bit
+	;ldx		#led_d5
+	;jsr		L_Dis_7Bit_DigitDot
+	
 
 	jsr		L_Send_DRAM
 ?Test_Over

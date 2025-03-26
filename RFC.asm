@@ -37,8 +37,8 @@ F_RFC_Channel_Select:
 	lda		#C_TMR0_T0I+C_TMR1_TMR0				; 配置TM0时钟源为T0I,TM1时钟源为TM0,级联TM0和TM1
 	sta		TMCLK
 
-	lda		#C_SyncWithDIV+C_DIVC_Fsub_64
-	sta		DIVC								; 开启定时器同步，DIV时钟源为Fsub/64(512Hz)
+	lda		#C_SyncWithDIV+C_DIVC_Fsub_4
+	sta		DIVC								; 开启定时器同步，DIV时钟源为Fsub/4(8192Hz)
 
 	smb0	TMRC								; 开启TMR0
 	smb1	TMRC								; 开启TMR1

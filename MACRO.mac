@@ -1,35 +1,38 @@
 CLK_SET_LOW		MACRO
 	lda		PD
-	and		#$bf
+	and		#$98
 	sta		PD
 	ENDM
 
 CLK_SET_HIGH	MACRO
 	lda		PD
+	and		#$d8
 	ora		#$40
 	sta		PD
 	ENDM
 		
 SDI_SET_LOW		MACRO
 	lda		PC
-	and		#$fd
+	and		#$dd
 	sta		PC
 	ENDM
 
 SDI_SET_HIGH	MACRO
 	lda		PC
+	and		#$df
 	ora		#$02
 	sta		PC
 	ENDM
 		
 LE_SET_LOW		MACRO
 	lda		PD
-	and		#$7f
+	and		#$58
 	sta		PD
 	ENDM
 		
 LE_SET_HIGH		MACRO
 	lda		PD
+	and		#$d8
 	ora		#$80
 	sta		PD
 	ENDM
@@ -37,12 +40,13 @@ LE_SET_HIGH		MACRO
 
 LED_SET_LOW		MACRO
 	lda		PC
-	and		#$fe
+	and		#$de
 	sta		PC
 	ENDM
 
 LED_SET_HIGH	MACRO
 	lda		PC
+	and		#$df
 	ora		#$01
 	sta		PC
 	ENDM

@@ -216,18 +216,17 @@ R_Date_Week				DS		1	;星期数，从1开始
 Alarm_Min_Addr			EQU		$
 R_Alarm1_Min			DS		1	;闹钟1分
 R_Alarm2_Min			DS		1	;闹钟2分
-R_Alarm3_Min			DS		1	;闹钟3分
 
 Alarm_Hour_Addr			EQU		$
 R_Alarm1_Hour			DS		1	;闹钟1小时
 R_Alarm2_Hour			DS		1	;闹钟2小时
-R_Alarm3_Hour			DS		1	;闹钟3小时
 
 R_Snooze_Min			DS		1	;贪睡闹钟分钟
 R_Snooze_Hour			DS		1	;贪睡闹钟小时
 
 ;---------------------------------------       
 P_Temp					DS		8
+T_Temp					DS		1
 ;---------------------------------------
 ;---------------------------------------
 ;***************************************

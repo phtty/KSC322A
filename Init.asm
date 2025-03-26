@@ -19,11 +19,6 @@ F_Init_SystemRam:								; 系统内存初始化
 	;lda		#00
 	;sta		R_Alarm2_Min
 
-	lda		#12
-	sta		R_Alarm3_Hour
-	;lda		#00
-	;sta		R_Alarm3_Min
-
 	lda		#01
 	sta		R_Date_Day
 	lda		#01
@@ -76,10 +71,11 @@ F_Port_Init:
 	lda		PB_TYPE
 	ora		#$8
 
-	lda		#$17
-	sta		PD_DIR								; PD0~2、4配置为三态输入，其余为输出
+	lda		#$37
+	sta		PD_DIR								; PD0~2、5配置为三态输入，PD4为上拉输入
 	lda		#$10
 	sta		PD
+	lda		#$00
 	sta		PD_SEG								; PD口全部作IO口使用
 
 	lda		PD
@@ -113,7 +109,8 @@ F_Timer_Init:
 	lda		#0
 	sta		IFR									; 清理中断标志位
 	lda		IER									; Tim2定时器中断用于PWM调光、按键扫描、蜂鸣间隔、快加频率
-	ora		#C_TMR2I+C_LCDI+C_DIVI				; LCD中断用于2Hz、1Hz的半S处理、1S处理和走时
+	;ora		#C_TMR2I+C_LCDI+C_DIVI				; LCD中断用于2Hz、1Hz的半S处理、1S处理和走时
+	ora		#C_DIVI
 	sta		IER									; DIV中断用于红外接收、响闹时钟源，RFC测量计时
 
 	rts

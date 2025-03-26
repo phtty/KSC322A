@@ -67,17 +67,12 @@ F_Display_Alarm:								; 调用显示函数显示当前闹钟
 	rts
 
 L_DisAlarm_Min:
-	lda		Sys_Status_Ordinal					; 判断要显示三组闹钟的哪一个
+	lda		Sys_Status_Ordinal					; 判断要显示两组闹钟的哪一个
 	bne		No_Alarm1Min_Display
 	lda		R_Alarm1_Min
 	bra		AlarmMin_Display_Start
 No_Alarm1Min_Display:
-	cmp		#1
-	bne		No_Alarm2Min_Display
 	lda		R_Alarm2_Min
-	bra		AlarmMin_Display_Start
-No_Alarm2Min_Display:
-	lda		R_Alarm3_Min
 AlarmMin_Display_Start:
 	sta		R_Alarm_Min
 	lda		R_Alarm_Min
@@ -101,12 +96,7 @@ L_DisAlarm_Hour:								; 显示闹钟小时
 	lda		R_Alarm1_Hour
 	bra		AlarmHour_Display_Start
 No_Alarm1Hour_Display:
-	cmp		#1
-	bne		No_Alarm2Hour_Display
 	lda		R_Alarm2_Hour
-	bra		AlarmHour_Display_Start
-No_Alarm2Hour_Display:
-	lda		R_Alarm3_Hour
 AlarmHour_Display_Start:
 	sta		R_Alarm_Hour
 	bbr0	Clock_Flag,L_24hMode_Alarm

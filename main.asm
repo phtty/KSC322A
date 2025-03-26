@@ -30,7 +30,7 @@ L_Clear_Ram_Loop:
 
 	lda		#$0
 	sta		DIVC									; 分频控制器，定时器与DIV异步
-	sta		IER										; 除能中断
+	sta		IER										; 除能所有中断
 	lda		FUSE
 	sta		MF0										; 为内部RC振荡器提供校准数据	
 

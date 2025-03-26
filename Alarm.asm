@@ -265,13 +265,6 @@ L_BeepStart:
 ; 优先判断闹钟3，其次闹钟2，最后闹钟1
 Is_Alarm_Trigger:
 	lda		Alarm_Switch
-	and		#100B
-	beq		L_Alarm3_NoMatch					; 如果此闹钟没有开启，则不会判断它
-	lda		R_Time_Hour
-	cmp		R_Alarm3_Hour
-	beq		L_Alarm3_HourMatch
-L_Alarm3_NoMatch:
-	lda		Alarm_Switch
 	and		#010B
 	beq		L_Alarm2_NoMatch					; 如果此闹钟没有开启，则不会判断它
 	lda		R_Time_Hour
@@ -301,11 +294,6 @@ L_Alarm2_HourMatch:
 	beq		L_Alarm2_MinMatch
 	bra		L_Alarm2_NoMatch					; 闹钟2分钟不匹配，判断闹钟2
 
-L_Alarm3_HourMatch:
-	lda		R_Time_Min
-	cmp		R_Alarm3_Min
-	beq		L_Alarm3_MinMatch
-	bra		L_Alarm3_NoMatch
 
 L_Alarm1_MinMatch:
 	lda		R_Time_Sec
@@ -336,22 +324,6 @@ Alarm2_SecMatch:
 	lda		R_Alarm2_Hour						; 将符合条件的闹钟的时、分同步至触发闹钟,方便后续的判断逻辑
 	sta		R_Alarm_Hour
 	lda		R_Alarm2_Min
-	sta		R_Alarm_Min
-	rts
-
-L_Alarm3_MinMatch:
-	lda		R_Time_Sec
-	cmp		#00
-	beq		Alarm3_SecMatch
-	rmb1	Clock_Flag							; 若秒不匹配，则闹钟不触发并退出
-	rts
-Alarm3_SecMatch:
-	jsr		L_Alarm_Match_Handle
-	lda		#100B
-	sta		Triggered_AlarmGroup
-	lda		R_Alarm3_Hour						; 将符合条件的闹钟的时、分同步至触发闹钟,方便后续的判断逻辑
-	sta		R_Alarm_Hour
-	lda		R_Alarm3_Min
 	sta		R_Alarm_Min
 	rts
 
