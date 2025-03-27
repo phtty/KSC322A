@@ -1,4 +1,4 @@
-F_Init_SystemRam:								; 系统内存初始化
+F_Init_SystemRam	MACRO						; 系统内存初始化
 	lda		#0001B
 	sta		Sys_Status_Flag
 
@@ -23,7 +23,7 @@ F_Init_SystemRam:								; 系统内存初始化
 	sta		R_Date_Day
 	lda		#01
 	sta		R_Date_Month
-	lda		#24
+	lda		#25
 	sta		R_Date_Year
 	;lda		#00
 	;sta		R_Date_Week
@@ -36,10 +36,10 @@ F_Init_SystemRam:								; 系统内存初始化
 	lda		#0
 	sta		Light_Level							; 初始亮度
 
-	rts
+	ENDM
 
 
-F_Beep_Init:
+F_Beep_Init		MACRO
 	lda		PB									; PB3配置为输出0
 	and		#$f7
 	sta		PB
@@ -48,10 +48,10 @@ F_Beep_Init:
 
 	rmb3	PB_TYPE								; PB3选择NMOS输出0避免漏电
 
-	rts
+	ENDM
 
 
-F_Port_Init:
+F_Port_Init		MACRO
 	lda		#$3c								; PA2~5设置为上拉输入，并且设置中断唤醒
 	sta		PA_WAKE
 	lda		#$2c
@@ -81,10 +81,10 @@ F_Port_Init:
 	lda		PD
 	sta		PD_IO_Backup						; 同步PD口当前状态和历史状态
 
-	rts
+	ENDM
 
 
-F_Timer_Init:
+F_Timer_Init	MACRO
 	rmb1	IER									; 关TMR0、1定时器中断
 	rmb1	IFR									; 清除TMR0、1中断标志位
 	rmb2	IER
@@ -112,12 +112,12 @@ F_Timer_Init:
 	ora		#C_TMR2I+C_LCDI+C_DIVI				; LCD中断用于2Hz、1Hz的半S处理、1S处理和走时
 	sta		IER									; DIV中断用于红外接收、响闹时钟源，RFC测量计时
 
-	rts
+	ENDM
 
 
 
 
-F_RFC_Init:
+F_RFC_Init		MACRO
 	rmb6	PC_SEG
 
 	lda		RFCC0								; PD0-3配置为RFC功能
@@ -128,4 +128,4 @@ F_RFC_Init:
 	sta		RFCC1								; 关闭RFC测量功能
 	sta		PD_SEG								; PD口全部作IO口使用
 
-	rts
+	ENDM

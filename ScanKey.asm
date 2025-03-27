@@ -396,7 +396,7 @@ SwitchState_DisMode:
 	eor		#100B
 	sta		Key_Flag							; 取反轮显标志位
 
-	jsr		F_Clock_Display
+	jsr		F_Time_Display
 	rts
 
 

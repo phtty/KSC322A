@@ -92,18 +92,16 @@ L_Get_Weak_YearFirstDay:
 
 ; 日期显示
 F_Date_Display:
-	jsr		F_ClrCol								; 日期不显示COL和PM
-	jsr		F_ClrPM
-
-	jsr		F_Display_Date							; 显示月日
+	jsr		F_Display_Date							; 显示月日和星期
+	jsr		F_Display_Week
 
 	rts
 
 
 
 F_DisYear_Set:
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Year	; 有快加时不闪烁
-	bbs1	Timer_Flag,L_Blink_Year					; 没有半S标志不闪烁
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Year		; 有快加时不闪烁
+	bbs1	Timer_Flag,L_Blink_Year
 	rts
 L_Blink_Year:
 	rmb1	Timer_Flag								; 清半S标志
@@ -119,7 +117,7 @@ L_Year_Clear:
 
 
 F_DisMonth_Set:
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Month	; 有快加时不闪烁
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Month		; 有快加时不闪烁
 	bbs1	Timer_Flag,L_Blink_Month				; 没有半S标志不闪烁
 	rts
 L_Blink_Month:
@@ -131,7 +129,7 @@ L_KeyTrigger_NoBlink_Month:
 	rts	
 L_Month_Clear:
 	rmb0	Timer_Flag								; 清1S标志
-	jsr		F_UnDisplay_D0_1
+	jsr		F_UnDisplay_D4_5
 	rts
 
 
@@ -148,7 +146,7 @@ L_KeyTrigger_NoBlink_Day:
 	rts	
 L_Day_Clear:
 	rmb0	Timer_Flag								; 清1S标志
-	jsr		F_UnDisplay_D2_3
+	jsr		F_UnDisplay_D6_7
 	rts
 
 

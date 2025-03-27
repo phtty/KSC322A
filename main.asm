@@ -5,7 +5,8 @@ CODE_BEG	EQU		E000H							; 起始地址
 
 PROG		SECTION OFFSET CODE_BEG					; 定义代码段的偏移量从CODE_BEG开始，用于组织程序代码。
 .include	50Px1x.h								; 头文件
-.include	RAM.INC	
+.include	RAM.INC
+.include	Init.mac
 .include	MACRO.mac
 
 STACK_BOT		EQU		FFH							; 堆栈底部
@@ -34,64 +35,60 @@ L_Clear_Ram_Loop:
 	lda		FUSE
 	sta		MF0										; 为内部RC振荡器提供校准数据	
 
-	jsr		F_Init_SystemRam						; 初始化系统RAM并禁用所有断电保留的RAM
-	jsr		F_Port_Init								; 初始化用到的IO口
-	jsr		F_Beep_Init
+	F_Init_SystemRam								; 初始化系统RAM并禁用所有断电保留的RAM
+	F_Port_Init										; 初始化用到的IO口
+	F_Beep_Init
 
-	jsr		F_Timer_Init
-	jsr		F_RFC_Init
+	F_Timer_Init
+	F_RFC_Init
 
 	cli												; 开总中断
 
 	jsr		L_Send_DRAM
 
 ;上电处理
-;	rmb4	IER										;  关闭按键中断避免上电过程被打扰
+	rmb4	IER										;  关闭按键中断避免上电过程被打扰
 	lda		#1
 	sta		Light_Level
 	smb0	PC										; 初始亮度设置为高亮
 	smb0	PC_IO_Backup
 
- 	;jsr		F_Test_Display							; 上电显示部分
-	;lda		#$02
-	;sta		Beep_Serial
-	;smb4	Key_Flag
-	;smb3	Timer_Switch
+ 	jsr		F_Test_Display							; 上电显示部分
 
 	jsr		F_RFC_MeasureStart						; 上电温度测量
 Wait_RFC_MeasureOver:
 	jsr		F_RFC_MeasureManage
 	bbs0	RFC_Flag,Wait_RFC_MeasureOver
-;
+
 ;	smb1	Timer_Flag
 ;	rmb0	Timer_Flag
 ;	jsr		F_SymbolRegulate
 ;	jsr		F_Time_Display
 ;	jsr		F_Display_Week
-;
-;	lda		#4										; 上电蜂鸣器响2声
-;	sta		Beep_Serial
-;	smb0	TMRC
-;Loop_BeepTest:										; 响铃两声
-;	jsr		F_Louding
-;	lda		Beep_Serial
-;	bne		Loop_BeepTest
-;	rmb0	TMRC
-;
-;	lda		#0001B
-;	sta		Sys_Status_Flag
-;	lda		#0
-;	sta		Sys_Status_Ordinal
-;
-;	smb4	IER										;  上电显示完成，重新开启按键中断
+
+	lda		#$02
+	sta		Beep_Serial
+	smb4	Key_Flag
+	smb3	Timer_Switch
+Loop_BeepTest:										; 响铃1声
+	jsr		F_BeepManage
+	lda		Beep_Serial
+	bne		Loop_BeepTest
+
+	lda		#0001B
+	sta		Sys_Status_Flag
+	lda		#0
+	sta		Sys_Status_Ordinal
+
+	smb4	IER										;  上电显示完成，重新开启按键中断
 	bra		Global_Run
 
 
 ; 状态机
 MainLoop:
-	;lda		PC
-	;and		#$20
-	;bne		Global_Run
+	lda		PC
+	and		#$20
+	bne		Global_Run
 	;smb4	SYSCLK
 	;sta		HALT									; 休眠
 	;rmb4	SYSCLK
@@ -102,23 +99,23 @@ Global_Run:											; 全局生效的功能处理
 	;jsr		F_PowerManage
 	jsr		F_Time_Run								; 走时
 	;jsr		F_SymbolRegulate
-	;jsr		F_Display_Week
+	jsr		F_Date_Display
 	jsr		F_RFC_MeasureManage
 	;jsr		F_ReturnToDisTime						; 定时返回时显模式
 
 Status_Juge:
-	bbs0	Sys_Status_Flag,Status_DisClock
+	bbs0	Sys_Status_Flag,Status_DisTime
 	bbs1	Sys_Status_Flag,Status_DisAlarm
 	bbs2	Sys_Status_Flag,Status_SetClock
 	bbs3	Sys_Status_Flag,Status_SetAlarm
 
 	bra		MainLoop
-Status_DisClock:
-	;jsr		F_Clock_Display
+Status_DisTime:
+	jsr		F_Time_Display
 	;jsr		F_Alarm_Handler							; 显示状态有响闹判断
 	;bra		MainLoop
 Status_DisAlarm:
-	;jsr		F_Alarm_Display
+	jsr		F_Alarm_GroupDis
 	;jsr		F_Alarm_Handler							; 显示状态有响闹判断
 	bra		MainLoop
 Status_SetClock:
@@ -223,7 +220,6 @@ L_EndIrq:
 .include	Time.asm
 .include	Calendar.asm
 .include	Beep.asm
-.include	Init.asm
 .include	Disp.asm
 .include	Display.asm
 .include	Alarm.asm

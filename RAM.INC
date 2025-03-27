@@ -10,6 +10,7 @@ IR_RamAddr		EQU		RamStarAddr+IR_Code_Addr-Page0RamStarAddr		;IR_Code的地址
 Time_Addr		EQU		RamStarAddr+Time_Str_Addr-Page0RamStarAddr		;事件相关数据的地址
 Alarm_MinAddr	EQU		RamStarAddr+Alarm_Min_Addr-Page0RamStarAddr		;闹钟组分钟数据地址
 Alarm_HourAddr	EQU		RamStarAddr+Alarm_Hour_Addr-Page0RamStarAddr	;闹钟组小时数据地址
+Alarm_WorkDayAddr	EQU	RamStarAddr+AL_WorkDay_Addr-Page0RamStarAddr	;闹钟组工作日数据地址
 ;***************************************
 ;Time_Addr		EUQ		B0H
 ;***************************************
@@ -105,9 +106,9 @@ Symbol_Flag				DS		1
 
 Sys_Status_Flag			DS		1
 ;bit0 = 1 时钟显示
-;bit1 = 1 闹钟显示
+;bit1 = 1 闹钟模式
 ;bit2 = 1 设置时钟
-;bit3 = 1 设置闹钟
+;bit3 = 1 计时模式
 
 Sys_Status_Ordinal		DS		1
 ; 子模式的序号
@@ -134,10 +135,10 @@ RFC_Flag				DS		1
 ;bit0 = 1 采样启用标志位
 ;bit1 = 1 禁用RFC采样标志，这通常是因为TMR0、1被占用
 ;bit2 = 1 负温度
-;bit3 = 1 
-;bit4 = 1 华氏度模式
-;bit5 = 1
-;bit6 = 1 温湿度测量完成标志
+;bit3 = 1 华氏度模式
+;bit4 = 1 温湿度测量完成标志
+;bit5 = 1 
+;bit6 = 1 
 
 IR_Flag					DS		1
 ;bit0 = 1 检测到上升沿
@@ -167,13 +168,27 @@ Backlight_Flag			DS		1
 ;bit2 = 1 手动进入熄屏模式
 
 Light_Level				DS		1	; 亮度等级
-;0 低亮
-;1 半亮
-;2 高亮
+; 0: 低亮
+; 1: 半亮
+; 2: 高亮
+
+Alarm_Group				DS		1	; 闹钟组
+; 0：闹钟组1
+; 1：闹钟组2
 
 Alarm_Switch			DS		1	; 各个闹钟开关
 ;bit0 = 1 闹钟1开启
 ;bit1 = 1 闹钟2开启
+
+AL_WorkDay_Addr			EQU		$
+Alarm1_WorkDay			DS		1	; 闹钟1的工作日
+; 0: 1~5
+; 1: 1~6
+; 2: 1~7
+Alarm2_WorkDay			DS		1	; 闹钟2的工作日
+; 0: 1~5
+; 1: 1~6
+; 2: 1~7
 
 Triggered_AlarmGroup	DS		1
 

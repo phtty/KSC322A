@@ -3,7 +3,7 @@ F_Display_Time:									; 调用显示函数显示当前时间
 	jsr		L_DisTime_Hour
 	rts
 
-L_DisTime_Min:
+L_DisTime_Min:									; 显示分钟
 	lda		R_Time_Min
 	jsr		L_A_DecToHex
 	pha
@@ -60,14 +60,14 @@ L_Hour_Tens_NoZero:
 
 
 
-; Sys_Status_Ordinal = 闹钟序号
-F_Display_Alarm:								; 调用显示函数显示当前闹钟
+; Alarm_Group = 当前处理的闹钟组
+F_Display_Alarm:								; 调用显示函数显示当前闹钟组
 	jsr		L_DisAlarm_Min
 	jsr		L_DisAlarm_Hour
 	rts
 
 L_DisAlarm_Min:
-	lda		Sys_Status_Ordinal					; 判断要显示两组闹钟的哪一个
+	lda		Alarm_Group							; 判断要显示两组闹钟的哪一个
 	bne		No_Alarm1Min_Display
 	lda		R_Alarm1_Min
 	bra		AlarmMin_Display_Start
@@ -90,7 +90,7 @@ AlarmMin_Display_Start:
 	rts
 
 L_DisAlarm_Hour:								; 显示闹钟小时
-	lda		Sys_Status_Ordinal					; 判断要显示三组闹钟的哪一个
+	lda		Alarm_Group							; 判断要显示三组闹钟的哪一个
 	cmp		#0
 	bne		No_Alarm1Hour_Display
 	lda		R_Alarm1_Hour
@@ -151,7 +151,7 @@ L_DisDate_Day:
 	jsr		L_A_DecToHex
 	pha
 	and		#$0f
-	ldx		#led_d3
+	ldx		#led_d7
 	jsr		L_Dis_7Bit_DigitDot
 	pla
 	and		#$f0
@@ -159,7 +159,7 @@ L_DisDate_Day:
 	bne		L_Day_Tens_NoZero					; 日期十位0不显示
 	lda		#10
 L_Day_Tens_NoZero:
-	ldx		#led_d2
+	ldx		#led_d6
 	jsr		L_Dis_7Bit_DigitDot
 	rts
 
@@ -168,16 +168,16 @@ L_DisDate_Month:
 	jsr		L_A_DecToHex
 	pha
 	and		#$0f
-	ldx		#led_d1
+	ldx		#led_d5
 	jsr		L_Dis_7Bit_DigitDot
 	pla
 	and		#$f0
 	jsr		L_LSR_4Bit
 	bne		L_Month_Tens_NoZero					; 月份十位0不显示
-	lda		#10
+	lda		#0
 L_Month_Tens_NoZero:
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
+	ldx		#led_d4
+	jsr		L_Dis_2Bit_DigitDot
 	rts
 
 L_DisDate_Year:
@@ -226,6 +226,27 @@ F_UnDisplay_D2_3:								; 闪烁时取消显示用的函数
 
 
 
+F_UnDisplay_D4_5:								; 闪烁时取消显示用的函数
+	lda		#0
+	ldx		#led_d4
+	jsr		L_Dis_2Bit_DigitDot
+	lda		#10
+	ldx		#led_d5
+	jsr		L_Dis_7Bit_DigitDot
+	rts
+
+
+F_UnDisplay_D6_7:								; 闪烁时取消显示用的函数
+	lda		#10
+	ldx		#led_d6
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#10
+	ldx		#led_d7
+	jsr		L_Dis_7Bit_DigitDot
+	rts
+
+
+
 
 F_Display_Week:
 	jsr		L_GetWeek
@@ -255,7 +276,7 @@ F_Display_Temper:
 	ldx		#led_TMPF
 	jsr		F_ClrSymbol							; 清理温度单位显示
 
-	bbr4	RFC_Flag,Dis_CDegree
+	bbr3	RFC_Flag,Dis_CDegree
 	jmp		Display_FahrenheitDegree
 Dis_CDegree:
 	jmp		Display_CelsiusDegree
@@ -291,7 +312,7 @@ Dis_CelSymbol:
 	jsr		F_DisSymbol
 
 NoMinusTemper:
-	ldx		#led_TMPC								; 显示摄氏度C
+	ldx		#led_TMPC							; 显示摄氏度C
 	jsr		F_DisSymbol
 	rts
 
@@ -315,7 +336,7 @@ Display_FahrenheitDegree:
 	and		#$0f
 	ldx		#led_d10
 	jsr		L_Dis_7Bit_DigitDot
-	ldx		#led_TMPF							; 显示华氏度C
+	ldx		#led_TMPF							; 显示华氏度F
 	jsr		F_DisSymbol
 	rts
 
@@ -472,6 +493,25 @@ F_ClrAL2:
 	rts
 
 
+; 根据A值跳转不同的AL点操作函数
+L_Control_ALDot:
+	clc
+	rol
+	tax
+	lda		AlarmDot_Table+1,x
+	pha
+	lda		AlarmDot_Table,x
+	pha
+	rts
+
+AlarmDot_Table:
+	dw		F_ClrAL1-1
+	dw		F_ClrAL2-1
+	dw		F_DisAL1-1
+	dw		F_DisAL2-1
+
+
+
 
 L_LSR_4Bit:
 	clc
@@ -483,7 +523,7 @@ L_LSR_4Bit:
 
 
 
-; 将256以内的数以十进制存储在十六进制格式中
+; 将A的值进行BCD转换
 ; A==转换的数，X==百位
 L_A_DecToHex:
 	sta		P_Temp								; 将十进制输入保存到P_Temp

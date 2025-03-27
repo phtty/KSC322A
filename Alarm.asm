@@ -1,52 +1,66 @@
-F_Alarm_Display:
-	jsr		F_DisCol
-	jsr		F_Display_Alarm
+F_Alarm_GroupDis:
+	jsr		L_AlarmDot_Blink
 
 	lda		Sys_Status_Ordinal
-	bne		No_Alarm1_Display
-	jsr		F_DisAL1
-	jsr		F_ClrAL2
-	bra		Alarm_Display_Exit
-No_Alarm1_Display:
-	jsr		F_ClrAL1
-	jsr		F_DisAL2
-Alarm_Display_Exit:
+	clc
+	rol
+	tax
+	lda		AlarmGroupHandle_Table+1,x
+	pha
+	lda		AlarmGroupHandle_Table,x
+	pha
+	rts											; 根据当前子模式，跳转到对应的显示函数
+
+AlarmGroupHandle_Table:
+	dw		F_Display_Alarm-1
+	dw		F_Alarm_SwitchStatue-1
+	dw		F_AlarmHour_Set-1
+	dw		F_AlarmMin_Set-1
+	dw		F_AlarmWorkDay_Set-1
+
+
+
+L_AlarmDot_Blink:
+	lda		Alarm_Group
+	eor		#1
+	sta		P_Temp
+	tax											; 取非当前闹组
+	lda		#1
+	jsr		L_A_LeftShift_XBit					; 把1左移相应位计算出当前组闹钟开关的位号
+	and		Alarm_Switch						; 和闹钟开关状态相与得出该位号是开还是关
+	clc
+	rol
+	clc
+	adc		P_Temp								; 非当前闹组加上非当前闹组状态*2即为要跳转的函数
+	jsr		L_Control_ALDot
+
+	bbs1	Symbol_Flag,L_AlarmDot_Out
 	rts
-
-
-
-
-F_Alarm_Set:
-	lda		Sys_Status_Ordinal
-	jsr		L_A_Div_3
-	cmp		#0
-	bne		No_AlarmSwitch_Mode
-	jmp		F_Alarm_SwitchStatue				; 闹钟开关设置显示
-No_AlarmSwitch_Mode:
-	cmp		#1
-	bne		No_AlarmHourSet_Mode
-	jmp		F_AlarmHour_Set						; 闹钟小时设置显示
-No_AlarmHourSet_Mode:
-	jmp		F_AlarmMin_Set						; 闹钟分钟设置显示
+L_AlarmDot_Out:									; 闪烁当前闹组
+	rmb1	Symbol_Flag
+	bbs0	Symbol_Flag,No_ALDot_Display
+	lda		Alarm_Group
+	clc
+	adc		#2
+	jmp		L_Control_ALDot						; 当前组AL点半秒亮
+No_ALDot_Display:
+	rmb0	Symbol_Flag
+	lda		Alarm_Group
+	jmp		L_Control_ALDot						; 当前组AL点1秒灭
 
 
 
 
 ; 闹钟开关显示
 F_Alarm_SwitchStatue:
-	jsr		F_DisCol
-
 	bbs1	Timer_Flag,?AlarmSW_BlinkStart
 	rts
 ?AlarmSW_BlinkStart:
 	rmb1	Timer_Flag
 	bbs0	Timer_Flag,AlarmSW_UnDisplay
-	lda		Sys_Status_Ordinal
-	jsr		L_A_Div_3							; Sys_Ordinal除以3得到左移的量
-	txa
-	pha											; 保存闹钟序号
+	ldx		Alarm_Group
 	lda		#1
-	jsr		L_A_LeftShift_XBit					; 把1左移相应位计算出当前的闹钟开关的位号
+	jsr		L_A_LeftShift_XBit					; 把1左移相应位计算出当前组闹钟开关的位号
 	and		Alarm_Switch						; 和闹钟开关状态相与得出该位号是开还是关
 
 	beq		ALSwitch_DisOff
@@ -62,7 +76,7 @@ F_Alarm_SwitchStatue:
 ALSwitch_DisOff:
 	lda		#9
 	ldx		#led_d0
-	jsr		L_Dis_7Bit_WordDot					; 显示OFF
+	jsr		L_Dis_7Bit_WordDot					; 显示--
 
 	lda		#9
 	ldx		#led_d1
@@ -72,13 +86,14 @@ ALSwitch_DisOff:
 AlarmSW_UnDisplay:
 	rmb0	Timer_Flag
 	jmp		F_UnDisplay_D0_1
+	jmp		F_UnDisplay_D2_3
 
 ALSwitch_DisNum:								; 显示闹钟序号
 	lda		#4
 	ldx		#led_d2
 	jsr		L_Dis_7Bit_WordDot
 
-	pla											; +1为实际闹钟序号
+	lda		Alarm_Group							; +1为实际闹钟序号
 	clc
 	adc		#1
 	ldx		#led_d3
@@ -96,28 +111,13 @@ L_AlarmHour_Set:
 
 	jsr		F_DisCol
 
-	lda		Sys_Status_Ordinal					; 保存子模式序号
-	pha
-	clc
-	ror											; 将设置模式的序号除以2
-	beq		Alarm_Serial_HourOut				; 再减1即可得到显示模式的序号
-	sec											; 如果除以2之后为0则不用减
-	sbc		#1
-Alarm_Serial_HourOut:
-	sta		Sys_Status_Ordinal					; 为了调用显示闹钟函数，子模式序号改为闹钟显示模式
-
 	bbs2	Key_Flag,L_AlarmHour_Display		; 有快加时常亮
 	bbs0	Timer_Flag,L_AlarmHour_Clear
 L_AlarmHour_Display:
-	jsr		F_Display_Alarm
-	bra		AlarmHour_Set_Exit
+	jmp		F_Display_Alarm
 L_AlarmHour_Clear:
 	rmb0	Timer_Flag							; 清1S标志
-	jsr		F_UnDisplay_D0_1
-AlarmHour_Set_Exit:
-	pla
-	sta		Sys_Status_Ordinal					; 将子模式序号恢复为闹钟设置模式版本
-	rts
+	jmp		F_UnDisplay_D0_1
 
 
 
@@ -127,29 +127,47 @@ F_AlarmMin_Set:
 	rts
 L_AlarmMin_Set:
 	rmb1	Timer_Flag
- 
+
 	jsr		F_DisCol
 
-	lda		Sys_Status_Ordinal					; 保存子模式序号
-	pha
-	clc
-	ror											; 将设置模式的序号除以4
-	clc
-	ror
-	sta		Sys_Status_Ordinal					; 为了调用显示闹钟函数，子模式序号改为闹钟显示模式
-
-	bbs2	Key_Flag,L_AlarmMin_Display		; 有快加时直接常亮
+	bbs2	Key_Flag,L_AlarmMin_Display			; 有快加时直接常亮
 	bbs0	Timer_Flag,L_AlarmMin_Clear
 L_AlarmMin_Display:
-	jsr		F_Display_Alarm
-	bra		AlarmMin_Set_Exit
+	jmp		F_Display_Alarm
 L_AlarmMin_Clear:
 	rmb0	Timer_Flag							; 清1S标志
-	jsr		F_UnDisplay_D2_3
-AlarmMin_Set_Exit:
-	pla
-	sta		Sys_Status_Ordinal					; 将子模式序号恢复为闹钟设置模式版本
+	jmp		F_UnDisplay_D2_3
+
+
+
+
+F_AlarmWorkDay_Set:
+	bbs1	Timer_Flag,L_AlarmWorkDay_Set
 	rts
+L_AlarmWorkDay_Set:
+	rmb1	Timer_Flag
+
+	jsr		F_DisCol
+
+	bbs0	Timer_Flag,L_AlarmWorkDay_Clear
+	ldx		#led_d1
+	lda		#1
+	jsr		L_Dis_7Bit_DigitDot					; 固定显示1-
+	ldx		#led_d2
+	lda		#10
+	jsr		L_Dis_7Bit_DigitDot
+	ldx		#led_d2+6
+	jsr		F_DisSymbol
+
+	ldx		Alarm_Group
+	lda		Alarm_WorkDayAddr,x					; 显示对应闹组的工作日
+	ldx		#led_d3
+	jsr		L_Dis_7Bit_DigitDot
+	rts
+L_AlarmWorkDay_Clear:
+	rmb0	Timer_Flag							; 清1S标志
+	jsr		F_UnDisplay_D0_1
+	jmp		F_UnDisplay_D2_3
 
 
 

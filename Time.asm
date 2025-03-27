@@ -1,5 +1,5 @@
 F_Time_Run:
-	bbs0	Time_Flag,L_TimeRun_Add				; 有增S标志才进处理
+	bbs0	Time_Flag,L_TimeRun_Add					; 有加时1S标志才进处理
 	rts
 L_TimeRun_Add:
 	rmb0	Time_Flag								; 清增S标志
@@ -30,18 +30,6 @@ L_Time_SecRun_Exit:
 
 
 
-; 时钟显示模式
-F_Clock_Display:
-	bbs0	Sys_Status_Ordinal,L_DisDate_Mode
-	jsr		F_Time_Display
-	rts
-L_DisDate_Mode:
-	jsr		F_Date_Display
-	rts
-
-
-
-
 ; 时间显示
 F_Time_Display:
 	bbs1	Timer_Flag,L_TimeDot_Out
@@ -49,13 +37,6 @@ F_Time_Display:
 L_TimeDot_Out:
 	rmb1	Timer_Flag
 	jsr		F_Display_Time
-
-	bbs0	Timer_Flag,L_Dot_Clear
-	jsr		F_DisCol								; 没1S标志亮点
-	rts												; 半S触发时没1S标志不走时，直接返回
-L_Dot_Clear:
-	rmb0	Timer_Flag
-	jsr		F_ClrCol								; 有1S标志灭S点
 	rts
 
 
@@ -112,13 +93,14 @@ L_TimeMode_Display:
 L_Mode_Clear:
 	rmb0	Timer_Flag								; 清1S标志
 	jsr		F_UnDisplay_D0_1
+	jsr		F_UnDisplay_D2_3
 	rts
 
 
 
 
 F_DisHour_Set:
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Hour	; 有快加时不闪烁
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Hour		; 有快加时不闪烁
 	bbs1	Timer_Flag,L_Blink_Hour
 	rts
 L_Blink_Hour:

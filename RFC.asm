@@ -3,8 +3,8 @@ F_RFC_MeasureManage:
 	bbs4	Key_Flag,L_RFC_Exit
 	bbs0	Key_Flag,L_RFC_Exit					; 按键按下时，不进行测量
 
-	bbr6	RFC_Flag,RFC_NoComplete
-	rmb6	RFC_Flag
+	bbr4	RFC_Flag,RFC_NoComplete
+	rmb4	RFC_Flag
 	jsr		F_RFC_MeasureStop					; 采样完成，停止进入DIV中断，关闭RFC测量功能
 RFC_NoComplete:
 	bbr2	Time_Flag,L_RFC_Exit				; 1S标志，计数15S
@@ -68,7 +68,7 @@ L_NoTemp:
 	sta		RFC_StanderCount_L
 	lda		TMR1
 	sta		RFC_StanderCount_M
-	smb6	RFC_Flag							; 采样完成，准备计算
+	smb4	RFC_Flag							; 采样完成，准备计算
 	rmb5	Timer_Switch
 L_Sample_Over:
 	lda		#0
@@ -92,7 +92,7 @@ F_RFC_TimerReset:								; 等待下一通道采样开始，重置定时器状态
 
 F_RFC_MeasureStop:
 	rmb0	RFC_Flag							; 清除采样启用中标志位
-	rmb6	RFC_Flag
+	rmb4	RFC_Flag
 
 	rmb5	Timer_Switch						; 关闭50Hz计时
 
@@ -118,7 +118,7 @@ L_CLR_RFC:
 F_RFC_Abort:
 	smb1	RFC_Flag							; 禁用RFC采样
 	rmb0	RFC_Flag							; 清除采样启用中标志位
-	rmb6	RFC_Flag
+	rmb4	RFC_Flag
 
 	rmb5	Timer_Switch						; 关闭50Hz计时
 
