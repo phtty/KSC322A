@@ -246,11 +246,14 @@ F_Display_Week:
 F_Display_Temper:
 	ldx		#led_minus
 	jsr		F_ClrSymbol							; 清负号显示
+	ldx		#led_d8
 	lda		#0
 	jsr		L_Dis_2Bit_DigitDot					; 清温度百位显示
-	lda		#10
-	ldx		#led_d7
-	jsr		L_Dis_7Bit_DigitDot					; 清理温度单位显示
+
+	ldx		#led_TMPC
+	jsr		F_ClrSymbol
+	ldx		#led_TMPF
+	jsr		F_ClrSymbol							; 清理温度单位显示
 
 	bbr4	RFC_Flag,Dis_CDegree
 	jmp		Display_FahrenheitDegree
@@ -263,34 +266,33 @@ Display_CelsiusDegree:
 	jsr		L_A_DecToHex
 	sta		P_Temp+7
 	and		#$0f
-	ldx		#led_d6
+	ldx		#led_d10
 	jsr		L_Dis_7Bit_DigitDot
 	lda		P_Temp+7
 	and		#$f0
-	beq		Degree_NoTens						; 高4位为0，则d5不显示
+	beq		Degree_NoTens						; 高4位为0，则d9不显示
 	jsr		L_LSR_4Bit
-	ldx		#led_d5
+	ldx		#led_d9
 	jsr		L_Dis_7Bit_DigitDot
 	bra		Dis_CelSymbol
 Degree_NoTens:
 	lda		#10
-	ldx		#led_d5
+	ldx		#led_d9
 	jsr		L_Dis_7Bit_DigitDot
-	bbr2	RFC_Flag,NoMinusTemper				; 温度是个位负数时，d5显示负号
+	bbr2	RFC_Flag,NoMinusTemper				; 温度是个位负数时，d9显示负号
 
-	ldx		#led_d5+6
+	ldx		#led_d9+6
 	jsr		F_DisSymbol
 	bra		NoMinusTemper
 
 Dis_CelSymbol:
-	bbr2	RFC_Flag,NoMinusTemper				; 温度为十位负数时，d4显示负号
+	bbr2	RFC_Flag,NoMinusTemper				; 温度为十位负数时，d8显示负号
 	ldx		#led_minus
 	jsr		F_DisSymbol
 
 NoMinusTemper:
-	lda		#0									; 显示摄氏度C
-	ldx		#led_d7
-	jsr		L_Dis_7Bit_WordDot
+	ldx		#led_TMPC								; 显示摄氏度C
+	jsr		F_DisSymbol
 	rts
 
 
@@ -298,23 +300,23 @@ Display_FahrenheitDegree:
 	jsr		F_C2F
 	lda		R_Temperature_F
 	jsr		L_A_DecToHex
-	
+
 	pha
 	txa
+	ldx		#led_d8
 	jsr		L_Dis_2Bit_DigitDot
 	pla
 	pha
 	and		#$f0
 	jsr		L_LSR_4Bit
-	ldx		#led_d5
+	ldx		#led_d9
 	jsr		L_Dis_7Bit_DigitDot
 	pla
 	and		#$0f
-	ldx		#led_d6
+	ldx		#led_d10
 	jsr		L_Dis_7Bit_DigitDot
-	lda		#1									; 显示华氏度C
-	ldx		#led_d7
-	jsr		L_Dis_7Bit_WordDot
+	ldx		#led_TMPF							; 显示华氏度C
+	jsr		F_DisSymbol
 	rts
 
 

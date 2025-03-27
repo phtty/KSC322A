@@ -112,10 +112,10 @@ I_LcdIRQ_Handler:
 	lda		#0
 	sta		Counter_2Hz
 	smb1	Timer_Flag						; 1Hz标志
-	lda		#$0f
-	ora		Time_Flag						; 走时加时、响铃加时、返回加时，RFC采样加时
-	sta		Time_Flag
-	rmb4	Time_Flag						; 清除响闹阻塞状态
+
+	lda		#$4f
+	ora		Time_Flag
+	sta		Time_Flag						; 走时加时、响铃加时、返回加时，RFC采样加时，亮屏时间加时，清除响闹阻塞状态
 
 L_1Hz_Juge:
 	inc		Counter_1Hz

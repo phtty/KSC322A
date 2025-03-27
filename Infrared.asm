@@ -20,10 +20,13 @@ Receive_Phase_Table:
 
 ; 收码阶段0，空闲时运行，下降沿到来时开始收码
 IR_Receive_Phase_0:
-	IR_FALLING_EDGE_JUGE
-	bbs1	IR_Flag,IR_Turn2Phase1
+	lda		PD
+	and		#$10
+	beq		IR_Turn2Phase1
 	rts
 IR_Turn2Phase1:
+	lda		#$2c							; 测试用，PA4输出
+	sta		PA
 	lda		#1
 	sta		IR_ReceivePhase					; 收码进入阶段1
 	smb3	IR_Flag							; IR开始计数
@@ -44,23 +47,23 @@ IR_Receive_Phase_1:
 ?IR_FirstCode_Juge:
 	lda		IR_Counter
 	cmp		#60
-	bcc		Phase1_Abort					; 终止收码
+	bcc		Phase1_Abort					; 下溢，终止收码
 	lda		#80
 	cmp		IR_Counter
-	bcc		Phase1_Abort
+	bcc		Phase1_Abort					; 上溢，终止收码
 	lda		#2
 	sta		IR_ReceivePhase					; 收码进入阶段2
 	lda		#0
 	sta		IR_Counter
 	rts
 Phase1_Abort:
-	bbs5	IR_Flag,?No_Mark
-	smb0	IR_Test
-	lda		IR_Counter
-	sta		Counter_Bak
-	lda		Code_Counter
-	sta		Counter_Bak2
-?No_Mark:
+;	bbs5	IR_Flag,?No_Mark				; 测试用代码
+;	smb0	IR_Test
+;	lda		IR_Counter
+;	sta		Counter_Bak
+;	lda		Code_Counter
+;	sta		Counter_Bak2
+;?No_Mark:
 	jmp		Receive_Abort
 
 
@@ -72,10 +75,10 @@ IR_Receive_Phase_2:
 ?IR_FirstCode_Juge:
 	lda		IR_Counter
 	cmp		#30
-	bcc		Phase2_NoGuid					; 非引导码
+	bcc		Phase2_NoGuid					; 引导码下溢，判断是否为重复码
 	lda		#38
 	cmp		IR_Counter
-	bcc		Phase2_NoGuid
+	bcc		Phase2_Abort					; 引导码上溢，终止收码
 	lda		#3
 	sta		IR_ReceivePhase					; 收码进入阶段3
 	lda		#0
@@ -84,10 +87,10 @@ IR_Receive_Phase_2:
 Phase2_NoGuid:
 	lda		IR_Counter
 	cmp		#14
-	bcc		Phase2_Abort					; 也非重复码，终止收码
+	bcc		Phase2_Abort					; 重复码下溢，终止收码
 	lda		#20
 	cmp		IR_Counter
-	bcc		Phase2_Abort					; 也非重复码，终止收码
+	bcc		Phase2_Abort					; 重复码上溢，终止收码
 	inc		Repeat_Coutner					; 收到重复码递增重复码计数
 	lda		#0
 	sta		IR_ReceivePhase
@@ -95,13 +98,13 @@ Phase2_NoGuid:
 	rmb3	IR_Flag
 	rts
 Phase2_Abort:
-	bbs5	IR_Flag,?No_Mark
-	smb1	IR_Test
-	lda		IR_Counter
-	sta		Counter_Bak
-	lda		Code_Counter
-	sta		Counter_Bak2
-?No_Mark:
+;	bbs5	IR_Flag,?No_Mark				; 测试用代码
+;	smb1	IR_Test
+;	lda		IR_Counter
+;	sta		Counter_Bak
+;	lda		Code_Counter
+;	sta		Counter_Bak2
+;?No_Mark:
 	jmp		Receive_Abort
 
 
@@ -111,25 +114,22 @@ IR_Receive_Phase_3:
 	bbs0	IR_Flag,?IR_FirstCode_Juge
 	rts
 ?IR_FirstCode_Juge:
-	;lda		IR_Counter
-	;cmp		#2
-	;bcc		Phase3_Abort					; 终止收码
 	lda		#7
 	cmp		IR_Counter
-	bcc		Phase3_Abort
+	bcc		Phase3_Abort					; 上溢，终止收码
 	lda		#4
 	sta		IR_ReceivePhase					; 收码进入阶段4
 	lda		#0
 	sta		IR_Counter
 	rts
 Phase3_Abort:
-	bbs5	IR_Flag,?No_Mark
-	smb2	IR_Test
-	lda		IR_Counter
-	sta		Counter_Bak
-	lda		Code_Counter
-	sta		Counter_Bak2
-?No_Mark:
+;	bbs5	IR_Flag,?No_Mark				; 测试用
+;	smb2	IR_Test
+;	lda		IR_Counter
+;	sta		Counter_Bak
+;	lda		Code_Counter
+;	sta		Counter_Bak2
+;?No_Mark:
 	jmp		Receive_Abort
 
 
@@ -157,13 +157,13 @@ Phase4_No0Code:
 	sec										; 入队1码
 	jmp		Receive_AfterHandle				; 收码1bit的后处理
 Phase4_Abort:
-	bbs5	IR_Flag,?No_Mark
-	smb3	IR_Test
-	lda		IR_Counter
-	sta		Counter_Bak
-	lda		Code_Counter
-	sta		Counter_Bak2
-?No_Mark:
+;	bbs5	IR_Flag,?No_Mark				; 测试用代码
+;	smb3	IR_Test
+;	lda		IR_Counter
+;	sta		Counter_Bak
+;	lda		Code_Counter
+;	sta		Counter_Bak2
+;?No_Mark:
 	jmp		Receive_Abort
 
 
@@ -175,7 +175,7 @@ Receive_Abort:
 	sta		D_Code
 	sta		IA_Code
 	sta		A_Code
-	lda		#%00100000
+;	lda		#%00100000						; 测试用代码
 	sta		IR_Flag
 	rts
 
@@ -198,19 +198,25 @@ Receive_Complete:
 	lda		#0
 	sta		IR_ReceivePhase					; 收码阶段重置为阶段0
 	sta		IR_Counter						; 清空计数
-	lda		#%00010100						; 复位相关标志位并打开解码标志位
+;	lda		#%00010100						; 测试用代码
+	lda		#%00000100						; 复位相关标志位并打开解码标志位
 	sta		IR_Flag
 	rts
 
 
 
+; 主循环调用收码时，在主循环调用该函数即可
+; 收码完成或者终止时退出循环
 IR_Receive_Loop:
-	jsr		IR_ReceiveHandle						; 红外接收
-	bbs4	IR_Flag,No_IR_Receiveing
-	lda		IR_Test
-	bne		No_IR_Receiveing
-	bra		IR_Receive_Loop							; 若当前接收阶段非0，则循环接收直到结束
+	jsr		IR_ReceiveHandle				; 红外接收
+	;bbs4	IR_Flag,No_IR_Receiveing
+	;lda		IR_Test
+	;bne		No_IR_Receiveing				; 测试用代码
+	lda		IR_ReceivePhase
+	beq		No_IR_Receiveing
+	bra		IR_Receive_Loop					; 若当前接收阶段非0，则循环接收直到结束
 No_IR_Receiveing:
+	jsr		F_IR_Decode						; 红外解码
 	rts
 
 
@@ -222,6 +228,14 @@ F_IR_Decode:
 	rts
 IR_Decode_Start:
 	rmb2	IR_Flag							; 每次收码完成后只解码1次
+	lda		D_Code
+	eor		ID_Code							; 校验数据码，若校验失败则不解码并清空缓冲区
+	cmp		#$ff
+	beq		IR_Code_CheckOK
+	jsr		Receive_Abort
+	rts
+IR_Code_CheckOK:
+
 	ldx		#0
 Compare_DCode_Loop:
 	lda		Table_IR_KeyCode,x
@@ -247,7 +261,7 @@ IR_KeyHandle:
 IR_Func_JumpTable:
 	dw		L_IR_Func_OnOff-1
 	dw		L_IR_Func_12_24-1
-	dw		L_IR_Func_Fun-1
+	dw		L_IR_Func_Alarm-1
 	dw		L_IR_Func_Inc-1
 	dw		L_IR_Func_Set-1
 	dw		L_IR_Func_Dec-1
@@ -270,6 +284,9 @@ IR_Func_JumpTable:
 
 L_IR_Func_OnOff:
 	lda		#0
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -278,14 +295,20 @@ L_IR_Func_OnOff:
 
 L_IR_Func_12_24:
 	lda		#1
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
 
 
-L_IR_Func_Fun:
+L_IR_Func_Alarm:
 	lda		#2
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -294,6 +317,9 @@ L_IR_Func_Fun:
 
 L_IR_Func_Inc:
 	lda		#3
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -302,6 +328,9 @@ L_IR_Func_Inc:
 
 L_IR_Func_Set:
 	lda		#4
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -310,6 +339,9 @@ L_IR_Func_Set:
 
 L_IR_Func_Dec:
 	lda		#5
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -318,6 +350,9 @@ L_IR_Func_Dec:
 
 L_IR_Func_LightStaue:
 	lda		#6
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -326,6 +361,9 @@ L_IR_Func_LightStaue:
 
 L_IR_Func_OK:
 	lda		#7
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -334,6 +372,9 @@ L_IR_Func_OK:
 
 L_IR_Func_CF:
 	lda		#8
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -342,6 +383,9 @@ L_IR_Func_CF:
 
 L_IR_Func_TimerUp:
 	lda		#9
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#0
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
@@ -352,6 +396,9 @@ L_IR_Func_TimerDown:
 	lda		#0
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
+	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
 
@@ -359,6 +406,9 @@ L_IR_Func_TimerDown:
 L_IR_Func_0:
 	lda		#1
 	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
@@ -368,6 +418,9 @@ L_IR_Func_1:
 	lda		#2
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
+	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
 
@@ -375,6 +428,9 @@ L_IR_Func_1:
 L_IR_Func_2:
 	lda		#3
 	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
@@ -384,6 +440,9 @@ L_IR_Func_3:
 	lda		#4
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
+	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
 
@@ -391,6 +450,9 @@ L_IR_Func_3:
 L_IR_Func_4:
 	lda		#5
 	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
@@ -400,6 +462,9 @@ L_IR_Func_5:
 	lda		#6
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
+	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
 
@@ -407,6 +472,9 @@ L_IR_Func_5:
 L_IR_Func_6:
 	lda		#7
 	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
@@ -416,6 +484,9 @@ L_IR_Func_7:
 	lda		#8
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
+	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
 
@@ -424,167 +495,175 @@ L_IR_Func_8:
 	lda		#9
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
+	lda		#1
+	ldx		#led_d0
+	jsr		L_Dis_7Bit_DigitDot
 	jsr		L_Send_DRAM
 	rts
 
 
 L_IR_Func_9:
 	lda		#0
-	ldx		#led_d2
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
-
-
-IR_Test_1:
-	bbs4	IR_Flag,Receive_Complete_1
-	rts
-Receive_Complete_1:
-	rmb4	IR_Flag
-
-	ldx		#led_Month
-	jsr		F_ClrSymbol
-	ldx		#led_Date
-	jsr		F_DisSymbol
-
-	lda		A_Code
-	jsr		L_A_DecToHex
-	pha
-	and		#$0f
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_DigitDot
-	pla
-	and		#$f0
-	jsr		L_LSR_4Bit
+	lda		#2
 	ldx		#led_d0
 	jsr		L_Dis_7Bit_DigitDot
-
-	lda		IA_Code
-	jsr		L_A_DecToHex
-	pha
-	and		#$0f
-	ldx		#led_d3
-	jsr		L_Dis_7Bit_DigitDot
-	pla
-	and		#$f0
-	jsr		L_LSR_4Bit
-	ldx		#led_d2
-	jsr		L_Dis_7Bit_DigitDot
-
-	lda		D_Code
-	jsr		L_A_DecToHex
-	pha
-	and		#$0f
-	ldx		#led_d6
-	jsr		L_Dis_7Bit_DigitDot
-	pla
-	and		#$f0
-	jsr		L_LSR_4Bit
-	ldx		#led_d5
-	jsr		L_Dis_7Bit_DigitDot
-
-	lda		ID_Code
-	jsr		L_A_DecToHex
-	pha
-	and		#$0f
-	ldx		#led_d10
-	jsr		L_Dis_7Bit_DigitDot
-	pla
-	and		#$f0
-	jsr		L_LSR_4Bit
-	ldx		#led_d9
-	jsr		L_Dis_7Bit_DigitDot
-
 	jsr		L_Send_DRAM
 	rts
 
 
-IR_Test_2:
-	lda		IR_Test
-	bne		Receive_Abort_1
-	rts
-Receive_Abort_1:
-	ldx		#led_Month
-	jsr		F_DisSymbol
 
-	bbr0	IR_Test,NoPhase1
-	rmb0	IR_Test
-	ldx		#led_MON1
-	jsr		F_DisSymbol
-	ldx		#led_TUE1
-	jsr		F_ClrSymbol
-	ldx		#led_WED1
-	jsr		F_ClrSymbol
-	ldx		#led_THU1
-	jsr		F_ClrSymbol
-	bra		Juge_Over
-NoPhase1:
-	bbr1	IR_Test,NoPhase2
-	rmb1	IR_Test
-	ldx		#led_MON1
-	jsr		F_ClrSymbol
-	ldx		#led_TUE1
-	jsr		F_DisSymbol
-	ldx		#led_WED1
-	jsr		F_ClrSymbol
-	ldx		#led_THU1
-	jsr		F_ClrSymbol
-	bra		Juge_Over
-NoPhase2:
-	bbr2	IR_Test,NoPhase3
-	rmb2	IR_Test
-	ldx		#led_MON1
-	jsr		F_ClrSymbol
-	ldx		#led_TUE1
-	jsr		F_ClrSymbol
-	ldx		#led_WED1
-	jsr		F_DisSymbol
-	ldx		#led_THU1
-	jsr		F_ClrSymbol
-	bra		Juge_Over
-NoPhase3:
-	rmb3	IR_Test
-	ldx		#led_MON1
-	jsr		F_ClrSymbol
-	ldx		#led_TUE1
-	jsr		F_ClrSymbol
-	ldx		#led_WED1
-	jsr		F_ClrSymbol
-	ldx		#led_THU1
-	jsr		F_DisSymbol
-Juge_Over:
 
-	lda		Counter_Bak
-	jsr		L_A_DecToHex
-	pha
-	txa
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	pla
-	pha
-	and		#$0f
-	ldx		#led_d2
-	jsr		L_Dis_7Bit_DigitDot
-	pla
-	and		#$f0
-	jsr		L_LSR_4Bit
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
+;IR_Test_1:
+;	bbs4	IR_Flag,Receive_Complete_1
+;	rts
+;Receive_Complete_1:
+;	rmb4	IR_Flag
+;
+;	ldx		#led_Month
+;	jsr		F_ClrSymbol
+;	ldx		#led_Date
+;	jsr		F_DisSymbol
+;
+;	lda		A_Code
+;	jsr		L_A_DecToHex
+;	pha
+;	and		#$0f
+;	ldx		#led_d1
+;	jsr		L_Dis_7Bit_DigitDot
+;	pla
+;	and		#$f0
+;	jsr		L_LSR_4Bit
+;	ldx		#led_d0
+;	jsr		L_Dis_7Bit_DigitDot
+;
+;	lda		IA_Code
+;	jsr		L_A_DecToHex
+;	pha
+;	and		#$0f
+;	ldx		#led_d3
+;	jsr		L_Dis_7Bit_DigitDot
+;	pla
+;	and		#$f0
+;	jsr		L_LSR_4Bit
+;	ldx		#led_d2
+;	jsr		L_Dis_7Bit_DigitDot
+;
+;	lda		D_Code
+;	jsr		L_A_DecToHex
+;	pha
+;	and		#$0f
+;	ldx		#led_d6
+;	jsr		L_Dis_7Bit_DigitDot
+;	pla
+;	and		#$f0
+;	jsr		L_LSR_4Bit
+;	ldx		#led_d5
+;	jsr		L_Dis_7Bit_DigitDot
+;
+;	lda		ID_Code
+;	jsr		L_A_DecToHex
+;	pha
+;	and		#$0f
+;	ldx		#led_d10
+;	jsr		L_Dis_7Bit_DigitDot
+;	pla
+;	and		#$f0
+;	jsr		L_LSR_4Bit
+;	ldx		#led_d9
+;	jsr		L_Dis_7Bit_DigitDot
+;
+;	jsr		L_Send_DRAM
+;	rts
 
-	lda		#32
-	sec
-	sbc		Counter_Bak2
-	jsr		L_A_DecToHex
-	pha
-	and		#$0f
-	ldx		#led_d6
-	jsr		L_Dis_7Bit_DigitDot
-	pla
-	and		#$f0
-	jsr		L_LSR_4Bit
-	ldx		#led_d5
-	jsr		L_Dis_7Bit_DigitDot
 
-	jsr		L_Send_DRAM
-?Test_Over
-	rts
+;IR_Test_2:
+;	lda		IR_Test
+;	bne		Receive_Abort_1
+;	rts
+;Receive_Abort_1:
+;	ldx		#led_Month
+;	jsr		F_DisSymbol
+;
+;	bbr0	IR_Test,NoPhase1
+;	rmb0	IR_Test
+;	ldx		#led_MON1
+;	jsr		F_DisSymbol
+;	ldx		#led_TUE1
+;	jsr		F_ClrSymbol
+;	ldx		#led_WED1
+;	jsr		F_ClrSymbol
+;	ldx		#led_THU1
+;	jsr		F_ClrSymbol
+;	bra		Juge_Over
+;NoPhase1:
+;	bbr1	IR_Test,NoPhase2
+;	rmb1	IR_Test
+;	ldx		#led_MON1
+;	jsr		F_ClrSymbol
+;	ldx		#led_TUE1
+;	jsr		F_DisSymbol
+;	ldx		#led_WED1
+;	jsr		F_ClrSymbol
+;	ldx		#led_THU1
+;	jsr		F_ClrSymbol
+;	bra		Juge_Over
+;NoPhase2:
+;	bbr2	IR_Test,NoPhase3
+;	rmb2	IR_Test
+;	ldx		#led_MON1
+;	jsr		F_ClrSymbol
+;	ldx		#led_TUE1
+;	jsr		F_ClrSymbol
+;	ldx		#led_WED1
+;	jsr		F_DisSymbol
+;	ldx		#led_THU1
+;	jsr		F_ClrSymbol
+;	bra		Juge_Over
+;NoPhase3:
+;	rmb3	IR_Test
+;	ldx		#led_MON1
+;	jsr		F_ClrSymbol
+;	ldx		#led_TUE1
+;	jsr		F_ClrSymbol
+;	ldx		#led_WED1
+;	jsr		F_ClrSymbol
+;	ldx		#led_THU1
+;	jsr		F_DisSymbol
+;Juge_Over:
+;
+;	lda		Counter_Bak
+;	jsr		L_A_DecToHex
+;	pha
+;	txa
+;	ldx		#led_d0
+;	jsr		L_Dis_7Bit_DigitDot
+;	pla
+;	pha
+;	and		#$0f
+;	ldx		#led_d2
+;	jsr		L_Dis_7Bit_DigitDot
+;	pla
+;	and		#$f0
+;	jsr		L_LSR_4Bit
+;	ldx		#led_d1
+;	jsr		L_Dis_7Bit_DigitDot
+;
+;	lda		#32
+;	sec
+;	sbc		Counter_Bak2
+;	jsr		L_A_DecToHex
+;	pha
+;	and		#$0f
+;	ldx		#led_d6
+;	jsr		L_Dis_7Bit_DigitDot
+;	pla
+;	and		#$f0
+;	jsr		L_LSR_4Bit
+;	ldx		#led_d5
+;	jsr		L_Dis_7Bit_DigitDot
+;
+;	jsr		L_Send_DRAM
+;?Test_Over
+;	rts

@@ -45,45 +45,45 @@ L_Clear_Ram_Loop:
 
 	jsr		L_Send_DRAM
 
-; 上电处理
-; 	rmb4	IER										;  关闭按键中断避免上电过程被打扰
-; 	lda		#1
-; 	sta		Light_Level
-; 	smb0	PC										; 初始亮度设置为高亮
-; 	smb0	PC_IO_Backup
-; 
+;上电处理
+;	rmb4	IER										;  关闭按键中断避免上电过程被打扰
+	lda		#1
+	sta		Light_Level
+	smb0	PC										; 初始亮度设置为高亮
+	smb0	PC_IO_Backup
+
  	;jsr		F_Test_Display							; 上电显示部分
 	;lda		#$02
 	;sta		Beep_Serial
 	;smb4	Key_Flag
 	;smb3	Timer_Switch
 
-; 	jsr		F_RFC_MeasureStart						; 上电温度测量
-; Wait_RFC_MeasureOver:
-; 	jsr		F_RFC_MeasureManage
-; 	bbs0	RFC_Flag,Wait_RFC_MeasureOver
-; 
-; 	smb1	Timer_Flag
-; 	rmb0	Timer_Flag
-; 	jsr		F_SymbolRegulate
-; 	jsr		F_Time_Display
-; 	jsr		F_Display_Week
-; 
-; 	lda		#4										; 上电蜂鸣器响2声
-; 	sta		Beep_Serial
-; 	smb0	TMRC
-; Loop_BeepTest:										; 响铃两声
-; 	jsr		F_Louding
-; 	lda		Beep_Serial
-; 	bne		Loop_BeepTest
-; 	rmb0	TMRC
-; 
-; 	lda		#0001B
-; 	sta		Sys_Status_Flag
-; 	lda		#0
-; 	sta		Sys_Status_Ordinal
-; 
-; 	smb4	IER										;  上电显示完成，重新开启按键中断
+	jsr		F_RFC_MeasureStart						; 上电温度测量
+Wait_RFC_MeasureOver:
+	jsr		F_RFC_MeasureManage
+	bbs0	RFC_Flag,Wait_RFC_MeasureOver
+;
+;	smb1	Timer_Flag
+;	rmb0	Timer_Flag
+;	jsr		F_SymbolRegulate
+;	jsr		F_Time_Display
+;	jsr		F_Display_Week
+;
+;	lda		#4										; 上电蜂鸣器响2声
+;	sta		Beep_Serial
+;	smb0	TMRC
+;Loop_BeepTest:										; 响铃两声
+;	jsr		F_Louding
+;	lda		Beep_Serial
+;	bne		Loop_BeepTest
+;	rmb0	TMRC
+;
+;	lda		#0001B
+;	sta		Sys_Status_Flag
+;	lda		#0
+;	sta		Sys_Status_Ordinal
+;
+;	smb4	IER										;  上电显示完成，重新开启按键中断
 	bra		Global_Run
 
 
@@ -98,15 +98,12 @@ MainLoop:
 Global_Run:											; 全局生效的功能处理
 	;jsr		F_KeyHandler
 	jsr		IR_Receive_Loop							; 红外接收
-	jsr		IR_Test_1
-	jsr		IR_Test_2
-	jsr		F_IR_Decode								; 红外解码
-	;jsr		F_BeepManage
+	jsr		F_BeepManage
 	;jsr		F_PowerManage
-	;jsr		F_Time_Run								; 走时
+	jsr		F_Time_Run								; 走时
 	;jsr		F_SymbolRegulate
 	;jsr		F_Display_Week
-	;jsr		F_RFC_MeasureManage
+	jsr		F_RFC_MeasureManage
 	;jsr		F_ReturnToDisTime						; 定时返回时显模式
 
 Status_Juge:

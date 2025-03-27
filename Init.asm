@@ -109,8 +109,7 @@ F_Timer_Init:
 	lda		#0
 	sta		IFR									; 清理中断标志位
 	lda		IER									; Tim2定时器中断用于PWM调光、按键扫描、蜂鸣间隔、快加频率
-	;ora		#C_TMR2I+C_LCDI+C_DIVI				; LCD中断用于2Hz、1Hz的半S处理、1S处理和走时
-	ora		#C_DIVI
+	ora		#C_TMR2I+C_LCDI+C_DIVI				; LCD中断用于2Hz、1Hz的半S处理、1S处理和走时
 	sta		IER									; DIV中断用于红外接收、响闹时钟源，RFC测量计时
 
 	rts

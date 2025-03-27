@@ -2,11 +2,11 @@ L_Temper_Handle:
 	jsr		L_RT_Multi_256
 	jsr		L_RT_Div_RR
 	jsr		L_Search_TemperTable
-	jsr		Temper_Compen						; 计算温度补偿
-	sec
-	lda		R_Temperature
-	sbc		R_Temper_Comp
-	sta		R_Temperature
+	;jsr		Temper_Compen						; 计算温度补偿
+	;sec
+	;lda		R_Temperature
+	;sbc		R_Temper_Comp
+	;sta		R_Temperature
 	rts
 
 ; 通过Qt查表确定当前温度

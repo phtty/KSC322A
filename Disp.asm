@@ -151,19 +151,36 @@ L_Inc_Dis_Index_Prog_Word:
 ;@impact:	X，A
 ;===========================================================
 L_Dis_2Bit_DigitDot:
-	bne		One_Digit
+	cpx		#led_d8
+	beq		L_2Bit_Digit8
+	cmp		#0
+	bne		?One_Digit
 	ldx		#led_d4						; 零则不显示
 	jsr		F_ClrSymbol
 	ldx		#led_d4+1
 	jsr		F_ClrSymbol
 	rts
-One_Digit:
+?One_Digit:
 	ldx		#led_d4						; 一则显示bc两段
 	jsr		F_DisSymbol
 	ldx		#led_d4+1
 	jsr		F_DisSymbol
 	rts
 
+L_2Bit_Digit8:
+	cmp		#0
+	bne		?One_Digit
+	ldx		#led_d8						; 零则不显示
+	jsr		F_ClrSymbol
+	ldx		#led_d8+1
+	jsr		F_ClrSymbol
+	rts
+?One_Digit:
+	ldx		#led_d8						; 一则显示bc两段
+	jsr		F_DisSymbol
+	ldx		#led_d8+1
+	jsr		F_DisSymbol
+	rts
 
 
 ; 发送显存到5020

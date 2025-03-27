@@ -57,11 +57,15 @@ IR_RISING_EDGE_JUGE	MACRO
 	and		#$10
 	beq		?No_RisingEdge
 	smb0	IR_Flag
-	lda		#$3c
+	lda		#$3c					; ≤‚ ‘”√£¨PA4 ‰≥ˆ
 	sta		PA
 	bra		?RisingEdge_JugeExit
 ?No_RisingEdge:
 	rmb0	IR_Flag
+	lda		#100
+	cmp		IR_Counter
+	bcs		?RisingEdge_JugeExit
+	jmp		Receive_Abort			; ≥¨ ±÷’÷π
 ?RisingEdge_JugeExit:
 	ENDM
 
@@ -70,10 +74,14 @@ IR_FALLING_EDGE_JUGE	MACRO
 	and		#$10
 	bne		?No_FallingEdge
 	smb1	IR_Flag
-	lda		#$2c
+	lda		#$2c					; ≤‚ ‘”√£¨PA4 ‰≥ˆ
 	sta		PA
 	bra		?FallingEdge_JugeExit
 ?No_FallingEdge:
 	rmb1	IR_Flag
+	lda		#100
+	cmp		IR_Counter
+	bcs		?FallingEdge_JugeExit
+	jmp		Receive_Abort			; ≥¨ ±÷’÷π
 ?FallingEdge_JugeExit:
 	ENDM
