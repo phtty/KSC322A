@@ -183,6 +183,19 @@ L_2Bit_Digit8:
 	rts
 
 
+
+
+F_Flash_Display:
+	bbs6	Time_Flag,L_Flash_Start
+	rts
+L_Flash_Start:
+	rmb6	Time_Flag
+	jsr		L_Send_DRAM
+	rts
+
+
+
+
 ; 发送显存到5020
 L_Send_DRAM:
 	LE_SET_LOW							; 发送数据时需要LE拉低锁存5020当前数据

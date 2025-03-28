@@ -53,9 +53,10 @@ Return_MaxTime			DS		1
 AlarmLoud_Counter		DS		1
 IR_Counter				DS		1
 Code_Counter			DS		1
-Repeat_Coutner			DS		1
-Counter_Bak				DS		1
-Counter_Bak2			DS		1
+Repeat_Counter			DS		1
+Interval_Counter		DS		1
+;Counter_Bak				DS		1
+;Counter_Bak2			DS		1
 
 Calendar_Flag			DS		1
 ;bit0 = 1 闰年
@@ -66,10 +67,10 @@ Clock_Flag				DS		1
 ;bit0 = 1 12h模式
 ;bit1 = 1 闹钟触发
 ;bit2 = 1 响闹模式
-;bit3 = 1 贪睡模式
+;bit3 = 1 
 ;bit4 = 1 
-;bit5	  上次的响闹模式，判断是响闹结束还是未响闹
-;bit6 = 1 贪睡按键触发导致的响闹结束
+;bit5 = 1 
+;bit6 = 1 
 
 Timer_Flag				DS		1
 ;bit0 = 1 1Hz标志
@@ -98,6 +99,7 @@ Time_Flag				DS		1
 ;bit3 = 1 返回初始状态加时1S标志
 ;bit4 = 1 清除响闹阻塞标志
 ;bit5 = 1 亮屏时间加时1S标志
+;bit6 = 1 刷新显示计时
 
 ; 符号操作
 Symbol_Flag				DS		1
@@ -106,9 +108,10 @@ Symbol_Flag				DS		1
 
 Sys_Status_Flag			DS		1
 ;bit0 = 1 时钟显示
-;bit1 = 1 闹钟模式
+;bit1 = 1 闹钟显示
 ;bit2 = 1 设置时钟
-;bit3 = 1 计时模式
+;bit3 = 1 闹钟设置
+;bit4 = 1 计时模式
 
 Sys_Status_Ordinal		DS		1
 ; 子模式的序号
@@ -144,9 +147,9 @@ IR_Flag					DS		1
 ;bit0 = 1 检测到上升沿
 ;bit1 = 1 检测到下降沿
 ;bit2 = 1 开始解码标志
-;bit3 = 1 开始计数标志
-;bit4 = 1 接收完成	|	测试用
-;bit5 = 1 终止标记	|	测试用
+;bit3 = 1 IR_Counter开始计数标志
+;bit4 = 1 Interval_Counter开始计数标志
+;bit5 = 1 长按处理标志
 
 ;IR_Test					DS		1
 ;bit0 = 1 阶段1终止
@@ -164,8 +167,9 @@ IR_ReceivePhase			DS		1
 
 Backlight_Flag			DS		1
 ;bit0 = 1 DC5V接入时唤醒
-;bit1 = 1 亮屏标志
+;bit1 = 1 PWM调光开关
 ;bit2 = 1 手动进入熄屏模式
+;bit3 = 1 自动亮度
 
 Light_Level				DS		1	; 亮度等级
 ; 0: 低亮
@@ -236,12 +240,8 @@ Alarm_Hour_Addr			EQU		$
 R_Alarm1_Hour			DS		1	;闹钟1小时
 R_Alarm2_Hour			DS		1	;闹钟2小时
 
-R_Snooze_Min			DS		1	;贪睡闹钟分钟
-R_Snooze_Hour			DS		1	;贪睡闹钟小时
-
 ;---------------------------------------       
 P_Temp					DS		8
-T_Temp					DS		1
 ;---------------------------------------
 ;---------------------------------------
 ;***************************************

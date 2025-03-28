@@ -39,7 +39,7 @@ Counter_NoAdd:
 	rts											; 长按计时，必须满2S才有快加
 L_QuikAdd:
 	bbs2	Key_Flag,NoQuikAdd_Beep
-	jsr		L_Key_Beep
+	jsr		L_KeyBeep_ON
 NoQuikAdd_Beep:
 	smb2	Key_Flag
 	rmb2	Timer_Flag
@@ -93,7 +93,7 @@ F_SpecialKey_Handle:							; 特殊按键的处理
 	rts
 SpecialKey_Handle:
 	bbs2	Key_Flag,SpecialKey_NoBeep
-	jsr		L_Key_Beep
+	jsr		L_KeyBeep_ON
 SpecialKey_NoBeep:
 	bbs0	SpecialKey_Flag,L_KeyF_ShortHandle	; 短按的特殊功能处理
 	bbs1	SpecialKey_Flag,L_KeyD_ShortHandle
@@ -121,7 +121,6 @@ L_KeyM_ShortHandle:
 	jsr		SwitchState_ClockSet				; 时设模式切换设置内容
 	rts
 No_SwitchState_ClockSet:
-	jsr		SwitchState_ClockDis				; 显示模式下切换日期显示、时间显示模式
 	rts
 
 L_KeyU_ShortHandle:
@@ -149,7 +148,6 @@ L_KeyS_ShortHandle:
 	lda		Sys_Status_Flag
 	and		#0011B
 	beq		KeyS_NoDisMode
-	jsr		SwitchState_DisMode					; 切换固显-轮显	
 	rts
 KeyS_NoDisMode:
 	lda		Sys_Status_Flag
@@ -169,7 +167,7 @@ KeyS_ShortHandle_Exit:
 ; 按键触发函数，处理每个按键触发后的响应条件
 L_KeyFTrigger:
 	jsr		L_Universal_TriggerHandle			; 通用按键处理
-	jsr		L_Key_NoSnoozeLoud					; 按键处理贪睡和响闹
+	jsr		L_Key_ShutdownLoud					; 按键处理贪睡和响闹
 
 	lda		Sys_Status_Flag
 	cmp		#0100B
@@ -179,7 +177,7 @@ StatusCS_No_KeyF:
 	cmp		#1000B
 	bne		StatusAS_No_KeyF
 	bbr2	Key_Flag,L_ASMode_KeyF_ShortTri
-	jsr		L_Key_NoBeep
+	jsr		L_KeyBeep_OFF
 	jmp		L_KeyExit							; 闹钟设置模式A键长按无效
 L_ASMode_KeyF_ShortTri:
 	smb0	SpecialKey_Flag						; 闹设模式下，A键为特殊功能按键
@@ -210,13 +208,13 @@ L_DisMode_KeyD_LongTri:
 
 L_KeyMTrigger:
 	jsr		L_Universal_TriggerHandle			; 通用按键处理
-	jsr		L_Key_NoSnoozeLoud					; 按键处理贪睡和响闹
+	jsr		L_Key_ShutdownLoud					; 按键处理贪睡和响闹
 
 	lda		Sys_Status_Flag
 	cmp		#0100B
 	bne		StatusCS_No_KeyM
 	bbr2	Key_Flag,L_CSMode_KeyM_ShortTri
-	jsr		L_Key_NoBeep
+	jsr		L_KeyBeep_OFF
 	jmp		L_KeyExit							; 时设模式M键长按无效
 L_CSMode_KeyM_ShortTri:
 	smb2	SpecialKey_Flag
@@ -240,13 +238,13 @@ L_DisMode_KeyM_LongTri:
 
 L_KeyUTrigger:
 	jsr		L_Universal_TriggerHandle			; 通用按键处理
-	jsr		L_Key_NoSnoozeLoud					; 按键处理贪睡和响闹
+	jsr		L_Key_ShutdownLoud					; 按键处理贪睡和响闹
 
 	lda		Sys_Status_Flag
 	and		#0011B
 	beq		Status_NoDisMode_KeyU				; 时钟显和闹显U键切换12/24h
 	bbr2	Key_Flag,L_DMode_KeyU_ShortTri
-	jsr		L_Key_NoBeep
+	jsr		L_KeyBeep_OFF
 	jmp		L_KeyExit							; 显示模式U键长按无效
 L_DMode_KeyU_ShortTri:
 	smb3	SpecialKey_Flag
@@ -270,13 +268,13 @@ L_KeyUTrigger_Exit:
 
 L_KeySTrigger:
 	jsr		L_Universal_TriggerHandle			; 通用按键处理
-	jsr		L_Key_NoSnoozeLoud					; 按键处理贪睡和响闹
+	jsr		L_Key_ShutdownLoud					; 按键处理贪睡和响闹
 
 	lda		Sys_Status_Flag
 	and		#0011B
 	beq		Status_NoDisMode_KeyS				; 判断是否为显示模式
 	bbr2	Key_Flag,L_DMode_KeyS_ShortTri
-	jsr		L_Key_NoBeep
+	jsr		L_KeyBeep_OFF
 	jmp		L_KeyExit							; 显示模式D键长按无效
 L_DMode_KeyS_ShortTri:
 	smb4	SpecialKey_Flag
@@ -299,15 +297,13 @@ L_KeySTrigger_Exit:
 
 
 ; 按键打断贪睡和响闹
-L_Key_NoSnoozeLoud:
-	lda		Clock_Flag
-	and		#00001100B
-	beq		?NoSnoozeLoud
-	jsr		L_NoSnooze_CloseLoud				; 打断贪睡和响闹
+L_Key_ShutdownLoud:
+	bbs2	Clock_Flag,?No_AlarmLouding
+	jsr		L_CloseLoud							; 打断响闹
 	pla
 	pla
 	jmp		L_KeyExit
-?NoSnoozeLoud:
+?No_AlarmLouding:
 	rts
 
 
@@ -342,61 +338,18 @@ WakeUp_Event_Exit:
 	rts
 
 
-L_Key_Beep:
+L_KeyBeep_ON:
 	lda		#10B								; 设置按键提示音的响铃序列
 	sta		Beep_Serial
-	smb0	TMRC								; 开TIM0蜂鸣器时钟
 	smb4	Key_Flag							; 置位按键提示音标志
+	smb3	Timer_Switch
 	rts
 
-L_Key_NoBeep:
+L_KeyBeep_OFF:
 	lda		#0									; 清除按键提示音的响铃序列
 	sta		Beep_Serial
-	rmb0	TMRC								; 关TIM0蜂鸣器时钟
 	rmb4	Key_Flag							; 复位按键提示音标志
-	rts
-
-
-
-
-; 时钟模式的时显和日显切换
-SwitchState_ClockDis:
-	bbs0	Sys_Status_Flag,CD_ModeCHG
-	lda		#0
-	sta		Sys_Status_Ordinal					; 从别的模式切换到时显时，需要清空一次子模式
-CD_ModeCHG:
-	lda		Sys_Status_Ordinal					; 对第一位取反，在日期显示和时间显示之间切换
-	eor		#1
-	sta		Sys_Status_Ordinal
-
-	lda		#0001B
-	sta		Sys_Status_Flag						; 切换时钟显示
-
-	bbr0	Sys_Status_Ordinal,?SWState_ClockDis_Eixt
-	lda		#5
-	sta		Return_MaxTime						; 日显示模式，返回时间设为5S
-	jsr		F_Date_Display
-	rts
-?SWState_ClockDis_Eixt:
-	jsr		L_TimeDot_Out
-	rts
-
-
-
-
-; 切换轮流显示-固定显示
-SwitchState_DisMode:
-	lda		#0
-	sta		Counter_DP
-	sta		Sys_Status_Ordinal
-	lda		#0001B
-	sta		Sys_Status_Flag						; 切换轮、固显会将当前状态设置为时显
-
-	lda		Key_Flag
-	eor		#100B
-	sta		Key_Flag							; 取反轮显标志位
-
-	jsr		F_Time_Display
+	rmb3	Timer_Switch
 	rts
 
 
@@ -405,24 +358,26 @@ SwitchState_DisMode:
 ; 切换到闹钟显示状态
 SwitchState_AlarmDis:
 	lda		#5
-	sta		Return_MaxTime						; 显示模式，5S返回时显
+	sta		Return_MaxTime						; 设置模式，5S返回时显
 
 	lda		Sys_Status_Flag
-	cmp		#0010B
-	beq		L_Change_Ordinal_AD					; 判断当前状态是否已经是闹钟显示
-	lda		#0010B
+	cmp		#00010B
+	beq		L_Change_Group_AD					; 判断当前状态是否已经是闹钟显示
+	lda		#00010B
 	sta		Sys_Status_Flag						; 当前状态非闹显则切换至闹显
 	lda		#0
-	sta		Sys_Status_Ordinal					; 清零子模式序号
+	sta		Sys_Status_Ordinal					; 清零子模式序号和闹钟组
+	sta		Alarm_Group
 	rts
-L_Change_Ordinal_AD:
-	inc		Sys_Status_Ordinal					; 当前状态为闹显，则递增子模式序号
-	lda		Sys_Status_Ordinal
-	cmp		#3
-	bcc		L_Ordinal_Exit_AD
+L_Change_Group_AD:
+	inc		Alarm_Group							; 当前状态为闹显，则递增闹钟组
+	lda		Alarm_Group
+	cmp		#2
+	bcc		L_Group_Exit_AD
 	lda		#0
-	sta		Sys_Status_Ordinal					; 子模式序号大于2时，重置子模式序号
-L_Ordinal_Exit_AD:
+	sta		Alarm_Group							; 闹钟组大于1时，回到时显模式
+L_Group_Exit_AD:
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -430,8 +385,8 @@ L_Ordinal_Exit_AD:
 
 ; 切换到时钟设置模式
 SwitchState_ClockSet:
-	lda		#15
-	sta		Return_MaxTime						; 设置模式，15S返回时显
+	lda		#10
+	sta		Return_MaxTime						; 设置模式，10S返回时显
 
 	lda		Sys_Status_Flag
 	cmp		#0100B
@@ -446,6 +401,7 @@ L_Change_Ordinal_CS:
 	lda		Sys_Status_Ordinal
 	cmp		#6
 	bcc		L_Ordinal_Exit_CS
+Return_CD_Mode:
 	lda		#0
 	sta		Sys_Status_Ordinal					; 子模式序号大于5时，则回到时显模式，并清空序号
 	lda		#0001B
@@ -453,6 +409,7 @@ L_Change_Ordinal_CS:
 L_Ordinal_Exit_CS:
 	smb1	Timer_Flag							; 退出后立即进行一次显示
 	rmb0	Timer_Flag
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -460,8 +417,8 @@ L_Ordinal_Exit_CS:
 
 ; 切换到闹钟设置模式
 SwitchState_AlarmSet:
-	lda		#15
-	sta		Return_MaxTime						; 设置模式，15S返回时显
+	lda		#10
+	sta		Return_MaxTime						; 设置模式，10S返回时显
 
 	lda		Sys_Status_Flag
 	cmp		#1000B
@@ -485,43 +442,36 @@ No_AlarmDis2Set:
 L_Change_Ordinal_AS:
 	inc		Sys_Status_Ordinal					; 当前状态为闹设，则递增子模式序号
 	lda		Sys_Status_Ordinal
-	cmp		#9
+	cmp		#4
 	bcc		L_Ordinal_Exit_AS
 	lda		#0
-	sta		Sys_Status_Ordinal					; 子模式序号大于8时，则回到时显模式，并清空序号
+	sta		Sys_Status_Ordinal					; 子模式序号大于3时，则回到时显模式，并清空序号
 	lda		#0001B
 	sta		Sys_Status_Flag
 L_Ordinal_Exit_AS:
 	smb1	Timer_Flag							; 退出后立即进行一次显示
 	rmb0	Timer_Flag
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
 
 
-; 切换灯光亮度
-; 0熄屏，1低亮
+; 切换三档灯光亮度
+; 0低亮，1半亮，2高亮
 LightLevel_Change:
+	inc		Light_Level
 	lda		Light_Level
-	beq		Level0
-
+	cmp		#3
+	bcs		LightLevel_Auto
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	rts
+LightLevel_Auto:
 	lda		#0
 	sta		Light_Level
-	rmb4	PD									; 低亮
-	rmb0	PC
-	rmb0	PC_IO_Backup
-
-	rts
-
-Level0:
-	rmb0	PC
-	jsr		L_Close_5020						; 熄屏后关闭LCD中断
-	lda		#1
-	sta		Light_Level
-	smb4	PD									; 下一次亮屏是高亮
-	smb0	PC_IO_Backup						; 设置记忆亮度为高亮，下次唤醒为高亮
-	rmb3	Key_Flag							; 置零屏幕唤醒标志
-	rmb2	Backlight_Flag						; 手动熄屏，按键唤醒不进行温湿度测量
+	smb3	Backlight_Flag
+	nop											; 切换至自动亮度
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -529,28 +479,28 @@ Level0:
 
 ; 进入贪睡模式
 Alarm_Snooze:
-	smb6	Clock_Flag							; 贪睡按键触发						
-	smb3	Clock_Flag							; 进入贪睡模式
-	rmb2	Clock_Flag							; 关闭响闹模式
-
-	lda		R_Snooze_Min						; 贪睡闹钟的时间加5
-	clc
-	adc		#5
-	cmp		#60
-	bcs		L_Snooze_OverflowMin
-	sta		R_Snooze_Min
-	bra		L_Snooze_Exit
-L_Snooze_OverflowMin:
-	sec
-	sbc		#60
-	sta		R_Snooze_Min						; 产生贪睡响闹的分钟进位
-	inc		R_Snooze_Hour
-	lda		R_Snooze_Hour
-	cmp		#24
-	bcc		L_Snooze_Exit
-	lda		#00									; 产生贪睡小时进位
-	sta		R_Snooze_Hour
-L_Snooze_Exit:
+;	smb6	Clock_Flag							; 贪睡按键触发						
+;	smb3	Clock_Flag							; 进入贪睡模式
+;	rmb2	Clock_Flag							; 关闭响闹模式
+;
+;	lda		R_Snooze_Min						; 贪睡闹钟的时间加5
+;	clc
+;	adc		#5
+;	cmp		#60
+;	bcs		L_Snooze_OverflowMin
+;	sta		R_Snooze_Min
+;	bra		L_Snooze_Exit
+;L_Snooze_OverflowMin:
+;	sec
+;	sbc		#60
+;	sta		R_Snooze_Min						; 产生贪睡响闹的分钟进位
+;	inc		R_Snooze_Hour
+;	lda		R_Snooze_Hour
+;	cmp		#24
+;	bcc		L_Snooze_Exit
+;	lda		#00									; 产生贪睡小时进位
+;	sta		R_Snooze_Hour
+;L_Snooze_Exit:
 	rts
 
 
@@ -563,6 +513,7 @@ ClockSet_SW_TimeMode:
 	sta		Clock_Flag
 
 	jsr		L_Dis_xxHr
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 ; 显示模式下12、24h模式切换
@@ -571,10 +522,7 @@ DM_SW_TimeMode:
 	eor		#01									; 翻转12/24h模式的状态
 	sta		Clock_Flag
 
-	lda		#0
-	sta		Sys_Status_Ordinal					; 如果是轮显模式，切换小时制会回到时显
-
-	jsr		F_Display_Time
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -587,6 +535,7 @@ TemperMode_Change:
 	sta		RFC_Flag
 	jsr		F_Display_Temper
 
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -621,8 +570,8 @@ No_CS_MonthAdd:
 
 ; 闹设模式增数
 AddNum_AS:
+	ldx		Alarm_Group
 	lda		Sys_Status_Ordinal
-	jsr		L_A_Div_3
 	cmp		#0
 	bne		No_AlarmSwitch_AddCHG
 	lda		#1
@@ -667,8 +616,8 @@ No_CS_MonthSub:
 
 ; 闹设模式减数
 SubNum_AS:
+	ldx		Alarm_Group
 	lda		Sys_Status_Ordinal
-	jsr		L_A_Div_3
 	cmp		#0
 	bne		No_AlarmSwitch_SubCHG
 	lda		#1
@@ -697,6 +646,7 @@ TimeHour_AddOverflow:
 TimeHour_Add_Exit:
 	jsr		L_LightLevel_WithKeyU
 	jsr		F_Display_Time
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 ; 时减少
@@ -711,6 +661,7 @@ TimeHour_SubOverflow:
 TimeHour_Sub_Exit:
 	jsr		L_LightLevel_WithKeyD
 	jsr		F_Display_Time
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -731,6 +682,7 @@ TimeMin_AddOverflow:
 	sta		R_Time_Min
 TimeMin_Add_Exit:
 	jsr		F_Display_Time
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 ; 分减少
@@ -747,6 +699,7 @@ TimeMin_SubOverflow:
 	sta		R_Time_Min
 TimeMin_Sub_Exit:
 	jsr		F_Display_Time
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -766,6 +719,7 @@ DateYear_Add_Exit:
 	jsr		L_DayOverflow_Juge					; 若当前日期超过当前月份允许的最大值，则日期变为当前允许最大日
 	jsr		F_Is_Leap_Year
 	jsr		L_DisDate_Year
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 ; 年减少
@@ -781,6 +735,7 @@ DateYear_Sub_Exit:
 	jsr		L_DayOverflow_Juge					; 若当前日期超过当前月份允许的最大值，则日期变为当前允许最大日
 	jsr		F_Is_Leap_Year
 	jsr		L_DisDate_Year
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -799,6 +754,7 @@ DateMonth_AddOverflow:
 	sta		R_Date_Month
 DateMonth_Add_Exit:
 	jsr		F_Date_Display
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 ; 月减少
@@ -814,6 +770,7 @@ DateMonth_SubOverflow:
 	sta		R_Date_Month
 DateMonth_Sub_Exit:
 	jsr		F_Date_Display
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -824,6 +781,7 @@ L_DateDay_Add:
 	inc		R_Date_Day
 	jsr		L_DayOverflow_To_1					; 若当前日期超过当前月份允许的最大值，则日期变为1日
 	jsr		F_Date_Display
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 ; 日减少
@@ -847,6 +805,7 @@ Common_Year_Get:
 	sta		R_Date_Day
 DateDay_Sub_Exit:
 	jsr		F_Date_Display
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
@@ -861,11 +820,12 @@ L_Alarm_Switch:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
 	jsr		F_Alarm_SwitchStatue				; 刷新一次闹钟开关显示
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
 ; 闹钟分增加
-; X闹钟组，0~2
+; X闹钟组，0~1
 L_AlarmMin_Add:
 	lda		Alarm_MinAddr,x
 	cmp		#59
@@ -881,10 +841,11 @@ AlarmMin_Add_Exit:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
 	jsr		F_AlarmMin_Set
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 ; 闹钟分减少
-; X闹钟组，0~2
+; X闹钟组，0~1
 L_AlarmMin_Sub:
 	lda		Alarm_MinAddr,x
 	beq		AlarmMin_SubOverflow
@@ -899,11 +860,12 @@ AlarmMin_Sub_Exit:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
 	jsr		F_AlarmMin_Set
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
 ; 闹钟时增加
-; X闹钟组，0~2
+; X闹钟组，0~1
 L_AlarmHour_Add:
 	lda		Alarm_HourAddr,x
 	cmp		#23
@@ -919,10 +881,11 @@ AlarmHour_Add_Exit:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
 	jsr		F_AlarmHour_Set
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 ; 闹钟时减少
-; X闹钟组，0~2
+; X闹钟组，0~1
 L_AlarmHour_Sub:
 	lda		Alarm_HourAddr,x
 	beq		AlarmHour_SubOverflow
@@ -937,12 +900,13 @@ AlarmHour_Sub_Exit:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
 	jsr		F_AlarmHour_Set
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
 
 
 
-; 天数是否溢出的判断
+; 天数上溢的判断（不增加）
 L_DayOverflow_Juge:
 	jsr		F_Is_Leap_Year
 	bbs0	Calendar_Flag,L_LeapYear_Handle		; 平年闰年的表分开查
@@ -963,9 +927,10 @@ Day_Overflow_Juge:
 	lda		P_Temp
 	sta		R_Date_Day
 DateDay_NoOverflow:
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
 
-; 天数是否溢出的判断
+; 天数上溢的判断（回到1日）
 L_DayOverflow_To_1:
 	jsr		F_Is_Leap_Year
 	bbs0	Calendar_Flag,L_LeapYear_Handle2	; 平年闰年的表分开查
@@ -986,8 +951,8 @@ Day_Overflow_Juge2:
 	lda		#1
 	sta		R_Date_Day
 DateDay_NoOverflow2:
+	jsr		L_Send_DRAM							; 按键操作结束刷新显示
 	rts
-
 
 L_KeyDelay:
 	lda		#0

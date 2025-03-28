@@ -35,12 +35,7 @@ L_Clear_Ram_Loop:
 	lda		FUSE
 	sta		MF0										; 为内部RC振荡器提供校准数据	
 
-	F_Init_SystemRam								; 初始化系统RAM并禁用所有断电保留的RAM
-	F_Port_Init										; 初始化用到的IO口
-	F_Beep_Init
-
-	F_Timer_Init
-	F_RFC_Init
+	jsr		F_Init_Sys								; 初始化外设
 
 	cli												; 开总中断
 
@@ -60,12 +55,6 @@ Wait_RFC_MeasureOver:
 	jsr		F_RFC_MeasureManage
 	bbs0	RFC_Flag,Wait_RFC_MeasureOver
 
-;	smb1	Timer_Flag
-;	rmb0	Timer_Flag
-;	jsr		F_SymbolRegulate
-;	jsr		F_Time_Display
-;	jsr		F_Display_Week
-
 	lda		#$02
 	sta		Beep_Serial
 	smb4	Key_Flag
@@ -81,6 +70,8 @@ Loop_BeepTest:										; 响铃1声
 	sta		Sys_Status_Ordinal
 
 	smb4	IER										;  上电显示完成，重新开启按键中断
+; 测试部分
+
 	bra		Global_Run
 
 
@@ -98,9 +89,10 @@ Global_Run:											; 全局生效的功能处理
 	jsr		F_BeepManage
 	;jsr		F_PowerManage
 	jsr		F_Time_Run								; 走时
-	;jsr		F_SymbolRegulate
+	jsr		F_SymbolRegulate
 	jsr		F_Date_Display
 	jsr		F_RFC_MeasureManage
+	jsr		F_Flash_Display							; 半S刷新显示
 	;jsr		F_ReturnToDisTime						; 定时返回时显模式
 
 Status_Juge:
@@ -108,21 +100,25 @@ Status_Juge:
 	bbs1	Sys_Status_Flag,Status_DisAlarm
 	bbs2	Sys_Status_Flag,Status_SetClock
 	bbs3	Sys_Status_Flag,Status_SetAlarm
+	bbs4	Sys_Status_Flag,Status_TimeKeep
 
 	bra		MainLoop
 Status_DisTime:
 	jsr		F_Time_Display
-	;jsr		F_Alarm_Handler							; 显示状态有响闹判断
-	;bra		MainLoop
+	jsr		F_Alarm_Handler							; 显示状态有响闹判断
+	bra		MainLoop
 Status_DisAlarm:
 	jsr		F_Alarm_GroupDis
-	;jsr		F_Alarm_Handler							; 显示状态有响闹判断
+	jsr		F_Alarm_Handler							; 显示状态有响闹判断
 	bra		MainLoop
 Status_SetClock:
-	;jsr		F_Clock_Set
+	jsr		F_Clock_Set
 	bra		MainLoop
 Status_SetAlarm:
-	;jsr		F_Alarm_Set
+	jsr		F_Alarm_GroupSet
+	bra		MainLoop
+Status_TimeKeep:
+	nop												; 计时模式的显示部分
 	bra		MainLoop
 
 
@@ -147,12 +143,10 @@ L_Return_Juge:
 L_Return_Stop:
 	lda		#0
 	sta		Return_Counter
-	bbr0	Sys_Status_Flag,No_TimeDis_Return		; Sys Flag第一位为0则不是时显
-	bbs0	Sys_Status_Ordinal,No_TimeDis_Return	; Sys Ordinal不为0则不是时显
-	;jsr		SwitchState_ClockDis					; 时显下若有轮显，则计时结束返回日显
+	bbr0	Sys_Status_Flag,No_ClockDis_Return		; Sys Flag第一位为0则不是时显
 	bra		L_Return_Juge_Exit
 
-No_TimeDis_Return:
+No_ClockDis_Return:
 	lda		#0
 	sta		Sys_Status_Ordinal						; 非时显若计时结束则返回时显
 
@@ -160,6 +154,18 @@ Return_Over:
 	lda		#0001B									; 回到时显模式
 	sta		Sys_Status_Flag
 L_Return_Juge_Exit:
+	rts
+
+
+
+
+F_Init_Sys:
+	F_Init_SystemRam								; 初始化系统RAM并禁用所有断电保留的RAM
+	F_Port_Init										; 初始化用到的IO口
+	F_Beep_Init
+
+	F_Timer_Init
+	F_RFC_Init
 	rts
 
 

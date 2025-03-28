@@ -1,4 +1,6 @@
 IR_ReceiveHandle:
+	jsr		RepeatCode_Handle
+
 	lda		IR_ReceivePhase
 	clc
 	rol
@@ -30,10 +32,11 @@ IR_Turn2Phase1:
 	lda		#1
 	sta		IR_ReceivePhase					; 收码进入阶段1
 	smb3	IR_Flag							; IR开始计数
+	smb4	IR_Flag							; 重复码间隔开始计数
+	smb4	Timer_Switch					; 打开32Hz计数开关
 
 	lda		#0
 	sta		IR_Counter						; 初始化变量
-	sta		T_Temp
 	lda		#32
 	sta		Code_Counter
 	rts
@@ -91,11 +94,19 @@ Phase2_NoGuid:
 	lda		#20
 	cmp		IR_Counter
 	bcc		Phase2_Abort					; 重复码上溢，终止收码
-	inc		Repeat_Coutner					; 收到重复码递增重复码计数
+	lda		Repeat_Counter
+	cmp		#19
+	bcs		RepeatCounter_NoAdd
+	inc		Repeat_Counter					; 收到重复码递增重复码计数，上限19个
+RepeatCounter_NoAdd:
+	lda		#5
+	sta		Interval_Counter				; 刷新重复码间隔超时计数
 	lda		#0
-	sta		IR_ReceivePhase
+	sta		IR_ReceivePhase					; 若收到重复码，收码也算成功，复位收码的相应资源
 	sta		IR_Counter
-	rmb3	IR_Flag
+	lda		#%00110000
+	and		IR_Flag
+	sta		IR_Flag
 	rts
 Phase2_Abort:
 ;	bbs5	IR_Flag,?No_Mark				; 测试用代码
@@ -171,12 +182,15 @@ Receive_Abort:
 	lda		#0
 	sta		IR_ReceivePhase
 	sta		IR_Counter						; 清空计数
+;	lda		#%00100000						; 测试用代码
+	sta		IR_Flag
+L_Clr_CodeBuffer:
+	lda		#0
 	sta		ID_Code							; 清空解码缓冲区
 	sta		D_Code
 	sta		IA_Code
 	sta		A_Code
-;	lda		#%00100000						; 测试用代码
-	sta		IR_Flag
+	sta		Repeat_Counter					; 每次收码失败会断掉连续接收重复码，清空重复码个数计数
 	rts
 
 
@@ -198,10 +212,38 @@ Receive_Complete:
 	lda		#0
 	sta		IR_ReceivePhase					; 收码阶段重置为阶段0
 	sta		IR_Counter						; 清空计数
+	sta		Repeat_Counter					; 每次收码成功也会断掉连续接收重复码，清空重复码个数计数
 ;	lda		#%00010100						; 测试用代码
 	lda		#%00000100						; 复位相关标志位并打开解码标志位
 	sta		IR_Flag
 	rts
+
+
+
+
+RepeatCode_Handle:
+	bbr4	IR_Flag,?Handle_Exit			; 要同时有重复码间隔开始计数和32Hz标志才处理
+	bbs4	Timer_Flag,RepeatCounter_Handle
+?Handle_Exit:
+	rts
+RepeatCounter_Handle:
+	rmb4	Timer_Flag
+	dec		Interval_Counter				; 重复码间隔计数递减
+	beq		Interval_Timeout				; 减到0视为超时
+	lda		Repeat_Counter
+	cmp		#19
+	beq		L_IR_NoLongPress				; 连续收到19个重复码则触发长按功能
+	smb5	IR_Flag							; 长按功能触发，解码程序中会处理长按
+	smb2	Timer_Switch					; 打开4Hz计数开关
+	smb2	Timer_Flag						; 打开4Hz计数开关
+	rts
+L_IR_NoLongPress:
+	rmb5	IR_Flag							; 重复码计数没到19个则没有长按功能
+	rmb2	Timer_Switch					; 关闭4Hz计数开关
+	rts
+Interval_Timeout:
+	jmp		L_Clr_CodeBuffer
+
 
 
 
@@ -222,8 +264,13 @@ No_IR_Receiveing:
 
 
 
-; 根据红外接收的NEC码执行对应的功能函数
+; 解码接收的NEC码执行对应的功能函数
 F_IR_Decode:
+	bbr5	IR_Flag,L_No_LongPress
+	bbr2	Timer_Flag,L_No_LongPress
+	rmb2	Timer_Flag
+	bra		IR_Decode_Start					; 在有长按标志时，4Hz进一次解码程序执行功能
+L_No_LongPress:
 	bbs2	IR_Flag,IR_Decode_Start
 	rts
 IR_Decode_Start:
@@ -234,8 +281,8 @@ IR_Decode_Start:
 	beq		IR_Code_CheckOK
 	jsr		Receive_Abort
 	rts
-IR_Code_CheckOK:
 
+IR_Code_CheckOK:
 	ldx		#0
 Compare_DCode_Loop:
 	lda		Table_IR_KeyCode,x
@@ -248,6 +295,8 @@ Compare_DCode_Loop:
 
 ; 跳转至对应功能函数
 IR_KeyHandle:
+	jsr		L_ShutDown_Alarm				; 若此时正在响闹，则关闭闹钟，但不执行功能
+
 	txa
 	clc
 	rol
@@ -282,235 +331,246 @@ IR_Func_JumpTable:
 	dw		L_IR_Func_9-1
 
 
-L_IR_Func_OnOff:
-	lda		#0
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
+L_IRCode_NoLongPress:						; 非长按功能键
+	bbs5	IR_Flag,?No_LongPress
 	rts
+?No_LongPress:
+	pla
+	pla
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+
+
+L_ShutDown_Alarm:							; 按键关闭闹钟
+	bbs2	Clock_Flag,?No_AlarmLouding
+	rts
+?No_AlarmLouding:
+	jsr		L_CloseLoud						; 打断响闹
+	pla
+	pla
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+
+
+
+L_IR_Func_OnOff:
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON
+	rmb1	Backlight_Flag					; 关闭PWM调光开关，并关闭所有LED
+	LED_SET_HIGH
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_12_24:
-	lda		#1
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	lda		Sys_Status_Flag
+	and		#%00011
+	beq		IR_12_24_Exit					; 显示模式生效
+	jmp		DM_SW_TimeMode					; 调用对应功能函数
+IR_12_24_Exit:
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_Alarm:
-	lda		#2
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	lda		Sys_Status_Flag
+	and		#%01100
+	beq		?No_SetMode
+	jmp		Return_CD_Mode					; 设置模式会返回时显
+?No_SetMode:
+	bbs4	Sys_Status_Flag,IR_Alarm_Exit	; 计时模式无效
+	jmp		SwitchState_AlarmDis			; 显示模式会进入闹显切换
+IR_Alarm_Exit:
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_Inc:
-	lda		#3
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	bbs5	IR_Flag,?LongPress_BeepOFF
+	jsr		L_KeyBeep_ON					; 只有第一下有按键音
+?LongPress_BeepOFF:
+	bbr2	Sys_Status_Flag,?No_CS_Mode
+	jmp		AddNum_CS						; 时设模式增数
+?No_CS_Mode:
+	bbr3	Sys_Status_Flag,?No_AS_Mode
+	jmp		AddNum_AS						; 闹设模式增数
+?No_AS_Mode:
+	bbr4	Sys_Status_Flag,IR_Inc_Exit
+	nop										; 计时模式的按键功能
+IR_Inc_Exit:
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_Set:
-	lda		#4
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+	lda		Sys_Status_Flag
+	and		#%00101							; 时钟模式切换到设置模式
+	beq		?No_CS_Mode
+	jmp		SwitchState_ClockSet
+?No_CS_Mode:
+	lda		Sys_Status_Flag
+	and		#%01010							; 闹钟模式切换到设置模式
+	beq		IR_Set_Exit
+	jmp		SwitchState_AlarmSet
+IR_Set_Exit:
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_Dec:
-	lda		#5
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	bbs5	IR_Flag,?LongPress_BeepOFF
+	jsr		L_KeyBeep_ON					; 只有第一下有按键音
+?LongPress_BeepOFF:
+	bbr2	Sys_Status_Flag,?No_CS_Mode
+	jmp		SubNum_CS						; 时设模式减数
+?No_CS_Mode:
+	bbr3	Sys_Status_Flag,?No_AS_Mode
+	jmp		SubNum_AS						; 闹设模式减数
+?No_AS_Mode:
+	bbr4	Sys_Status_Flag,IR_Dec_Exit
+	nop										; 计时模式的按键功能
+IR_Dec_Exit:
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_LightStaue:
-	lda		#6
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	jsr		LightLevel_Change
+	nop										; 亮度等级显示
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_OK:
-	lda		#7
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	lda		Sys_Status_Flag
+	and		#%01100
+	beq		?No_SetMode
+	jmp		Return_CD_Mode					; 设置模式会返回时显
+?No_SetMode:
+	bbr4	Sys_Status_Flag,IR_OK_Exit
+	nop										; 计时模式开始计时功能
+IR_OK_Exit:
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_CF:
-	lda		#8
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+	jmp		TemperMode_Change
 
 
 L_IR_Func_TimerUp:
-	lda		#9
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#0
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	bbs5	IR_Flag,?LongPress_BeepOFF
+	jsr		L_KeyBeep_ON					; 只有第一下有按键音
+?LongPress_BeepOFF:
+
+	nop										; 进入正计时模式，长按退出到时显
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_TimerDown:
-	lda		#0
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	bbs5	IR_Flag,?LongPress_BeepOFF
+	jsr		L_KeyBeep_ON					; 只有第一下有按键音
+?LongPress_BeepOFF:
+
+	nop										; 进入倒计时模式，长按退出到时显
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_0:
-	lda		#1
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为0
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_1:
-	lda		#2
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为1
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_2:
-	lda		#3
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为2
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_3:
-	lda		#4
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为3
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_4:
-	lda		#5
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为4
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_5:
-	lda		#6
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为5
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_6:
-	lda		#7
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为6
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_7:
-	lda		#8
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为7
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_8:
-	lda		#9
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#1
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为8
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 L_IR_Func_9:
-	lda		#0
-	ldx		#led_d1
-	jsr		L_Dis_7Bit_DigitDot
-	lda		#2
-	ldx		#led_d0
-	jsr		L_Dis_7Bit_DigitDot
-	jsr		L_Send_DRAM
-	rts
+	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
+	jsr		L_KeyBeep_ON					; 按键音
+
+	nop										; 正计时设置位数为9
+
+	jmp		L_Send_DRAM						; 按键操作结束刷新显示
 
 
 

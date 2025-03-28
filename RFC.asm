@@ -98,7 +98,6 @@ F_RFC_MeasureStop:
 
 	jsr		L_Temper_Handle
 	jsr		F_Display_Temper					; 数据处理后，显示温度和湿度
-	jsr		L_Send_DRAM
 
 L_CLR_RFC:
 	lda		#0

@@ -64,6 +64,7 @@ L_Hour_Tens_NoZero:
 F_Display_Alarm:								; 调用显示函数显示当前闹钟组
 	jsr		L_DisAlarm_Min
 	jsr		L_DisAlarm_Hour
+	
 	rts
 
 L_DisAlarm_Min:
@@ -349,9 +350,9 @@ F_SymbolRegulate:								; 显示常亮点
 	rts
 
 
-; 贪睡时闪ALM点
+; 响闹时闪ALM点
 L_ALMDot_Blink:
-	bbr3	Clock_Flag,L_SymbolDis_Exit			; 如果非贪睡状态，则不进此子程序
+	bbr2	Clock_Flag,L_SymbolDis_Exit			; 如果非贪睡状态，则不进此子程序
 	bbs0	Symbol_Flag,L_SymbolDis
 L_SymbolDis_Exit:
 	rts
@@ -383,7 +384,7 @@ Group2_Extinguish:
 
 ; 非闹钟显示状态下，显示开启的闹钟
 F_AlarmSW_Display:
-	bbs3	Clock_Flag,F_AlarmSW_Exit			; 贪睡时，被闪点子程序接管
+	bbs2	Clock_Flag,F_AlarmSW_Exit			; 响闹时，被闪点子程序接管
 	lda		Sys_Status_Flag
 	cmp		#0010B
 	bne		Alarm1_Switch						; 在闹钟显示模式下，不控制闹钟组的点显示
