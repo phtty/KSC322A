@@ -60,7 +60,7 @@ Interval_Counter		DS		1
 
 Calendar_Flag			DS		1
 ;bit0 = 1 闰年
-;bit1 = 1 增日期
+;bit1 = 1 日期显示更新
 ;bit2 = 1 星期反显
 
 Clock_Flag				DS		1
@@ -99,7 +99,7 @@ Time_Flag				DS		1
 ;bit3 = 1 返回初始状态加时1S标志
 ;bit4 = 1 清除响闹阻塞标志
 ;bit5 = 1 亮屏时间加时1S标志
-;bit6 = 1 刷新显示计时
+;bit6 = 1 刷新显示标志
 
 ; 符号操作
 Symbol_Flag				DS		1
@@ -144,8 +144,8 @@ RFC_Flag				DS		1
 ;bit6 = 1 
 
 IR_Flag					DS		1
-;bit0 = 1 检测到上升沿
-;bit1 = 1 检测到下降沿
+;bit0 = 1 检测到高电平
+;bit1 = 1 检测到低电平
 ;bit2 = 1 开始解码标志
 ;bit3 = 1 IR_Counter开始计数标志
 ;bit4 = 1 Interval_Counter开始计数标志
@@ -177,8 +177,8 @@ Light_Level				DS		1	; 亮度等级
 ; 2: 高亮
 
 Alarm_Group				DS		1	; 闹钟组
-; 0：闹钟组1
-; 1：闹钟组2
+; 0：当前操作闹钟组1
+; 1：当前操作闹钟组2
 
 Alarm_Switch			DS		1	; 各个闹钟开关
 ;bit0 = 1 闹钟1开启

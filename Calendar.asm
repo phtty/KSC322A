@@ -92,61 +92,86 @@ L_Get_Weak_YearFirstDay:
 
 ; 日期显示
 F_Date_Display:
-	jsr		F_Display_Date							; 显示月日和星期
-	jsr		F_Display_Week
+	bbr2	Sys_Status_Flag,?Juge_SysStatus_Over
+	lda		Sys_Status_Ordinal
+	cmp		#4
+	bne		?No_MonthSet
+	rts												; 在日期设置模式下，不通过此函数更新日期显示
+?No_MonthSet:
+	cmp		#5
+	bne		?Juge_SysStatus_Over
+	rts
+?Juge_SysStatus_Over:
 
+	bbs1	Calendar_Flag,L_DateFlash_Start
+	rts
+L_DateFlash_Start:
+	rmb1	Calendar_Flag							; 产生日期显示更新
+	jsr		F_Display_Date							; 更新月日和星期
+	jsr		F_Display_Week
+	REFLASH_DISPLAY
 	rts
 
 
 
 F_DisYear_Set:
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Year		; 有快加时不闪烁
 	bbs1	Timer_Flag,L_Blink_Year
 	rts
 L_Blink_Year:
 	rmb1	Timer_Flag								; 清半S标志
+
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Year		; 有快加时常亮
+	bbs5	IR_Flag,L_KeyTrigger_NoBlink_Year		; 有快加时常亮
 	bbs0	Timer_Flag,L_Year_Clear					; 有1S标志时灭
 L_KeyTrigger_NoBlink_Year:
 	jsr		L_DisDate_Year
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 L_Year_Clear:
 	rmb0	Timer_Flag								; 清1S标志
 	jsr		F_UnDisplay_D0_1
 	jsr		F_UnDisplay_D2_3
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 
 
 F_DisMonth_Set:
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Month		; 有快加时不闪烁
 	bbs1	Timer_Flag,L_Blink_Month				; 没有半S标志不闪烁
 	rts
 L_Blink_Month:
 	rmb1	Timer_Flag								; 清半S标志
+
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Month		; 有快加时常亮
+	bbs5	IR_Flag,L_KeyTrigger_NoBlink_Month		; 有快加时常亮
 	bbs0	Timer_Flag,L_Month_Clear				; 有1S标志时灭
 L_KeyTrigger_NoBlink_Month:
-	jsr		L_DisDate_Month
-	jsr		L_DisDate_Day
+	jsr		F_Display_Date
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts	
 L_Month_Clear:
 	rmb0	Timer_Flag								; 清1S标志
 	jsr		F_UnDisplay_D4_5
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 
 
 F_DisDay_Set:
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Day		; 有快加时不闪烁
 	bbs1	Timer_Flag,L_Blink_Day					; 没有半S标志不闪烁
 	rts
 L_Blink_Day:
 	rmb1	Timer_Flag								; 清半S标志
+
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Day		; 有快加时常亮
+	bbs5	IR_Flag,L_KeyTrigger_NoBlink_Day		; 有快加时常亮
 	bbs0	Timer_Flag,L_Day_Clear					; 有1S标志时灭
 L_KeyTrigger_NoBlink_Day:
-	jsr		L_DisDate_Day
-	jsr		L_DisDate_Month
+	jsr		F_Display_Date
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts	
 L_Day_Clear:
 	rmb0	Timer_Flag								; 清1S标志
 	jsr		F_UnDisplay_D6_7
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 
 

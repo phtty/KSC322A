@@ -81,8 +81,8 @@ L_21Hz_Juge:
 
 L_4Hz_Juge:
 	bbr2	Timer_Switch,Timer2IRQ_Exit		; 4Hz计数开关
-	inc		Counter_21Hz
-	beq		Timer2IRQ_Exit
+	inc		Counter_4Hz
+	bne		Timer2IRQ_Exit
 	smb2	Timer_Flag						; 4Hz标志
 
 Timer2IRQ_Exit:
@@ -94,8 +94,8 @@ I_PaIRQ_Handler:
 	smb0	Key_Flag
 	smb1	Key_Flag						; 首次触发
 	rmb2	Key_Flag						; 如果有新的下降沿到来，清快加标志位
-	rmb4	Timer_Flag						; 清32Hz标志位
-	smb4	Timer_Switch					; 打开快加定时
+	;rmb4	Timer_Flag						; 清32Hz标志位
+	;smb4	Timer_Switch					; 打开快加定时
 
 	;rmb5	IR_Flag
 	;jsr		F_ClearScreen				; 测试用代码

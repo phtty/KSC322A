@@ -35,14 +35,15 @@ F_Time_Display:
 	bbs1	Timer_Flag,L_TimeDot_Out
 	rts
 L_TimeDot_Out:
-	rmb1	Timer_Flag
+	rmb1	Timer_Flag								; 时间显示半S更新一次
 	jsr		F_Display_Time
+	REFLASH_DISPLAY									; 置位刷新显示标志位
 	rts
 
 
 
 
-; 时钟设置模式
+; 时钟设置模式，根据子模式序号进入对应的设置项显示
 F_Clock_Set:
 	lda		Sys_Status_Ordinal
 	bne		No_TMSwitch_Display
@@ -66,12 +67,10 @@ No_YearSet_Display:
 	bne		No_MonthSet_Display
 	jsr		F_ClrCol								; 日期不显示COL和PM
 	jsr		F_ClrPM
-
 	jmp		F_DisMonth_Set
 No_MonthSet_Display:
 	jsr		F_ClrCol								; 日期不显示COL和PM
 	jsr		F_ClrPM
-
 	jmp		F_DisDay_Set
 
 
@@ -86,21 +85,23 @@ L_TimeMode_Out:
 	jsr		F_ClrCol
 	jsr		F_ClrPM
 	bbs2	Key_Flag,L_TimeMode_Display
-	bbs0	Timer_Flag,L_Mode_Clear
+	bbs5	IR_Flag,L_TimeMode_Display				; 有快加时常亮
+	bbs0	Timer_Flag,L_Mode_Clear					; 1S灭
 L_TimeMode_Display:
 	jsr		L_Dis_xxHr
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 L_Mode_Clear:
 	rmb0	Timer_Flag								; 清1S标志
 	jsr		F_UnDisplay_D0_1
 	jsr		F_UnDisplay_D2_3
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 
 
 
 
 F_DisHour_Set:
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Hour		; 有快加时不闪烁
 	bbs1	Timer_Flag,L_Blink_Hour
 	rts
 L_Blink_Hour:
@@ -108,19 +109,22 @@ L_Blink_Hour:
 
 	jsr		F_DisCol
 
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Hour		; 有快加时常亮
+	bbs5	IR_Flag,L_KeyTrigger_NoBlink_Hour		; 有快加时常亮
 	bbs0	Timer_Flag,L_Hour_Clear
 L_KeyTrigger_NoBlink_Hour:
 	jsr		L_DisTime_Hour							; 半S亮
 	jsr		L_DisTime_Min
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 L_Hour_Clear:
 	rmb0	Timer_Flag
 	jsr		F_UnDisplay_D0_1						; 1S灭
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 
 
 F_DisMin_Set:
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Min		; 有快加时不闪烁
 	bbs1	Timer_Flag,L_Blink_Min					; 没有半S标志时不闪烁
 	rts
 L_Blink_Min:
@@ -128,12 +132,16 @@ L_Blink_Min:
 
 	jsr		F_DisCol
 
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Min		; 有快加时常亮
+	bbs5	IR_Flag,L_KeyTrigger_NoBlink_Min		; 有快加时常亮
 	bbs0	Timer_Flag,L_Min_Clear
 L_KeyTrigger_NoBlink_Min:
 	jsr		L_DisTime_Min							; 半S亮
 	jsr		L_DisTime_Hour
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts
 L_Min_Clear:
 	rmb0	Timer_Flag
 	jsr		F_UnDisplay_D2_3						; 1S灭
+	REFLASH_DISPLAY									; 置位刷新显示标志
 	rts

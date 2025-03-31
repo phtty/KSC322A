@@ -40,7 +40,7 @@ L_AlarmDot_Blink:
 	rol
 	clc
 	adc		P_Temp								; 非当前闹组加上非当前闹组状态*2即为要跳转的函数
-	jsr		L_Control_ALDot
+	;jsr		L_Control_ALDot
 
 	bbs1	Symbol_Flag,L_AlarmDot_Out
 	rts
@@ -50,11 +50,15 @@ L_AlarmDot_Out:									; 闪烁当前闹组
 	lda		Alarm_Group
 	clc
 	adc		#2
-	jmp		L_Control_ALDot						; 当前组AL点半秒亮
+	jsr		L_Control_ALDot						; 当前组AL点半秒亮
+	REFLASH_DISPLAY								; 置位刷新显示标志位
+	rts
 No_ALDot_Display:
 	rmb0	Symbol_Flag
 	lda		Alarm_Group
-	jmp		L_Control_ALDot						; 当前组AL点1秒灭
+	jsr		L_Control_ALDot						; 当前组AL点1秒灭
+	REFLASH_DISPLAY								; 置位刷新显示标志位
+	rts
 
 
 
@@ -120,12 +124,17 @@ L_AlarmHour_Set:
 	jsr		F_DisCol
 
 	bbs2	Key_Flag,L_AlarmHour_Display		; 有快加时常亮
+	bbs5	IR_Flag,L_AlarmHour_Display			; 有快加时常亮
 	bbs0	Timer_Flag,L_AlarmHour_Clear
 L_AlarmHour_Display:
-	jmp		F_Display_Alarm
+	jsr		F_Display_Alarm
+	REFLASH_DISPLAY								; 置位刷新显示标志位
+	rts
 L_AlarmHour_Clear:
 	rmb0	Timer_Flag							; 清1S标志
-	jmp		F_UnDisplay_D0_1
+	jsr		F_UnDisplay_D0_1
+	REFLASH_DISPLAY								; 置位刷新显示标志位
+	rts
 
 
 
@@ -138,13 +147,17 @@ L_AlarmMin_Set:
 
 	jsr		F_DisCol
 
-	bbs2	Key_Flag,L_AlarmMin_Display			; 有快加时直接常亮
-	bbs0	Timer_Flag,L_AlarmMin_Clear
+	bbs2	Key_Flag,L_AlarmMin_Display			; 有快加时常亮
+	bbs5	IR_Flag,L_AlarmMin_Display			; 有快加时常亮
 L_AlarmMin_Display:
-	jmp		F_Display_Alarm
+	jsr		F_Display_Alarm
+	REFLASH_DISPLAY								; 置位刷新显示标志位
+	rts
 L_AlarmMin_Clear:
 	rmb0	Timer_Flag							; 清1S标志
-	jmp		F_UnDisplay_D2_3
+	jsr		F_UnDisplay_D2_3
+	REFLASH_DISPLAY								; 置位刷新显示标志位
+	rts
 
 
 
@@ -171,11 +184,14 @@ L_AlarmWorkDay_Set:
 	lda		Alarm_WorkDayAddr,x					; 显示对应闹组的工作日
 	ldx		#led_d3
 	jsr		L_Dis_7Bit_DigitDot
+	REFLASH_DISPLAY								; 置位刷新显示标志位
 	rts
 L_AlarmWorkDay_Clear:
 	rmb0	Timer_Flag							; 清1S标志
 	jsr		F_UnDisplay_D0_1
-	jmp		F_UnDisplay_D2_3
+	jsr		F_UnDisplay_D2_3
+	REFLASH_DISPLAY								; 置位刷新显示标志位
+	rts
 
 
 

@@ -224,7 +224,7 @@ StatusCS_No_KeyM:
 	bne		StatusAS_No_KeyM
 	jmp		L_KeyExit							; 闹设模式M键无效
 StatusAS_No_KeyM:
-	bbs2	Key_Flag,L_DisMode_KeyM_LongTri	; 判断显示模式下的M长按
+	bbs2	Key_Flag,L_DisMode_KeyM_LongTri		; 判断显示模式下的M长按
 	lda		Sys_Status_Flag
 	and		#0011B
 	beq		StatusDM_No_KeyM
@@ -377,7 +377,8 @@ L_Change_Group_AD:
 	lda		#0
 	sta		Alarm_Group							; 闹钟组大于1时，回到时显模式
 L_Group_Exit_AD:
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	REFLASH_HALF_SEC
 	rts
 
 
@@ -407,9 +408,8 @@ Return_CD_Mode:
 	lda		#0001B
 	sta		Sys_Status_Flag
 L_Ordinal_Exit_CS:
-	smb1	Timer_Flag							; 退出后立即进行一次显示
-	rmb0	Timer_Flag
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	REFLASH_HALF_SEC
 	rts
 
 
@@ -449,9 +449,8 @@ L_Change_Ordinal_AS:
 	lda		#0001B
 	sta		Sys_Status_Flag
 L_Ordinal_Exit_AS:
-	smb1	Timer_Flag							; 退出后立即进行一次显示
-	rmb0	Timer_Flag
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	REFLASH_HALF_SEC
 	rts
 
 
@@ -464,14 +463,14 @@ LightLevel_Change:
 	lda		Light_Level
 	cmp		#3
 	bcs		LightLevel_Auto
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 LightLevel_Auto:
 	lda		#0
 	sta		Light_Level
 	smb3	Backlight_Flag
 	nop											; 切换至自动亮度
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -513,7 +512,8 @@ ClockSet_SW_TimeMode:
 	sta		Clock_Flag
 
 	jsr		L_Dis_xxHr
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	REFLASH_HALF_SEC
 	rts
 
 ; 显示模式下12、24h模式切换
@@ -522,7 +522,8 @@ DM_SW_TimeMode:
 	eor		#01									; 翻转12/24h模式的状态
 	sta		Clock_Flag
 
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	REFLASH_HALF_SEC
 	rts
 
 
@@ -533,9 +534,9 @@ TemperMode_Change:
 	lda		RFC_Flag							; 取反标志位，切换华氏度和摄氏度
 	eor		#00010000B
 	sta		RFC_Flag
-	jsr		F_Display_Temper
+	jsr		F_Display_Temper					; 更新温度单位和温度
 
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -644,9 +645,10 @@ TimeHour_AddOverflow:
 	lda		#0
 	sta		R_Time_Hour
 TimeHour_Add_Exit:
-	jsr		L_LightLevel_WithKeyU
-	jsr		F_Display_Time
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		L_LightLevel_WithKeyU
+	;jsr		F_Display_Time
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 ; 时减少
@@ -659,9 +661,10 @@ TimeHour_SubOverflow:
 	lda		#23
 	sta		R_Time_Hour
 TimeHour_Sub_Exit:
-	jsr		L_LightLevel_WithKeyD
-	jsr		F_Display_Time
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		L_LightLevel_WithKeyD
+	;jsr		F_Display_Time
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -681,8 +684,9 @@ TimeMin_AddOverflow:
 	lda		#0
 	sta		R_Time_Min
 TimeMin_Add_Exit:
-	jsr		F_Display_Time
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_Display_Time
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 ; 分减少
@@ -698,8 +702,9 @@ TimeMin_SubOverflow:
 	lda		#59
 	sta		R_Time_Min
 TimeMin_Sub_Exit:
-	jsr		F_Display_Time
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_Display_Time
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -718,8 +723,9 @@ DateYear_AddOverflow:
 DateYear_Add_Exit:
 	jsr		L_DayOverflow_Juge					; 若当前日期超过当前月份允许的最大值，则日期变为当前允许最大日
 	jsr		F_Is_Leap_Year
-	jsr		L_DisDate_Year
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		L_DisDate_Year
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 ; 年减少
@@ -734,8 +740,9 @@ DateYear_SubOverflow:
 DateYear_Sub_Exit:
 	jsr		L_DayOverflow_Juge					; 若当前日期超过当前月份允许的最大值，则日期变为当前允许最大日
 	jsr		F_Is_Leap_Year
-	jsr		L_DisDate_Year
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		L_DisDate_Year
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -753,8 +760,9 @@ DateMonth_AddOverflow:
 	lda		#1
 	sta		R_Date_Month
 DateMonth_Add_Exit:
-	jsr		F_Date_Display
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_Date_Display
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 ; 月减少
@@ -769,8 +777,9 @@ DateMonth_SubOverflow:
 	lda		#12
 	sta		R_Date_Month
 DateMonth_Sub_Exit:
-	jsr		F_Date_Display
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_Date_Display
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -780,8 +789,9 @@ DateMonth_Sub_Exit:
 L_DateDay_Add:
 	inc		R_Date_Day
 	jsr		L_DayOverflow_To_1					; 若当前日期超过当前月份允许的最大值，则日期变为1日
-	jsr		F_Date_Display
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_Date_Display
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 ; 日减少
@@ -804,8 +814,9 @@ Common_Year_Get:
 	lda		L_Table_Month_Common,x
 	sta		R_Date_Day
 DateDay_Sub_Exit:
-	jsr		F_Date_Display
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_Date_Display
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -819,8 +830,9 @@ L_Alarm_Switch:
 	sta		Alarm_Switch
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
-	jsr		F_Alarm_SwitchStatue				; 刷新一次闹钟开关显示
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_Alarm_SwitchStatue				; 刷新一次闹钟开关显示
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -840,8 +852,9 @@ AlarmMin_AddOverflow:
 AlarmMin_Add_Exit:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
-	jsr		F_AlarmMin_Set
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_AlarmMin_Set
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 ; 闹钟分减少
@@ -859,8 +872,9 @@ AlarmMin_SubOverflow:
 AlarmMin_Sub_Exit:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
-	jsr		F_AlarmMin_Set
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_AlarmMin_Set
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -880,8 +894,9 @@ AlarmHour_AddOverflow:
 AlarmHour_Add_Exit:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
-	jsr		F_AlarmHour_Set
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_AlarmHour_Set
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 ; 闹钟时减少
@@ -899,8 +914,9 @@ AlarmHour_SubOverflow:
 AlarmHour_Sub_Exit:
 	smb1	Timer_Flag
 	rmb0	Timer_Flag
-	jsr		F_AlarmHour_Set
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	;jsr		F_AlarmHour_Set
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 
@@ -927,7 +943,7 @@ Day_Overflow_Juge:
 	lda		P_Temp
 	sta		R_Date_Day
 DateDay_NoOverflow:
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 ; 天数上溢的判断（回到1日）
@@ -951,7 +967,7 @@ Day_Overflow_Juge2:
 	lda		#1
 	sta		R_Date_Day
 DateDay_NoOverflow2:
-	jsr		L_Send_DRAM							; 按键操作结束刷新显示
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
 
 L_KeyDelay:

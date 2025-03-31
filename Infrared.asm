@@ -17,6 +17,7 @@ Receive_Phase_Table:
 	dw		IR_Receive_Phase_2-1
 	dw		IR_Receive_Phase_3-1
 	dw		IR_Receive_Phase_4-1
+	dw		IR_Receive_Phase_5-1
 
 
 
@@ -27,13 +28,11 @@ IR_Receive_Phase_0:
 	beq		IR_Turn2Phase1
 	rts
 IR_Turn2Phase1:
-	lda		#$2c							; 测试用，PA4输出
-	sta		PA
+	;lda		#$2c							; 测试用，PA4输出
+	;sta		PA
 	lda		#1
 	sta		IR_ReceivePhase					; 收码进入阶段1
 	smb3	IR_Flag							; IR开始计数
-	smb4	IR_Flag							; 重复码间隔开始计数
-	smb4	Timer_Switch					; 打开32Hz计数开关
 
 	lda		#0
 	sta		IR_Counter						; 初始化变量
@@ -45,9 +44,9 @@ IR_Turn2Phase1:
 ; 收码阶段1，检测引导码/重复码的第一个电平时间是否合法
 IR_Receive_Phase_1:
 	IR_RISING_EDGE_JUGE
-	bbs0	IR_Flag,?IR_FirstCode_Juge
+	bbs0	IR_Flag,?IR_Level_Juge
 	rts
-?IR_FirstCode_Juge:
+?IR_Level_Juge:
 	lda		IR_Counter
 	cmp		#60
 	bcc		Phase1_Abort					; 下溢，终止收码
@@ -73,9 +72,9 @@ Phase1_Abort:
 ; 收码阶段2，区分是引导码还是重复码
 IR_Receive_Phase_2:
 	IR_FALLING_EDGE_JUGE
-	bbs1	IR_Flag,?IR_FirstCode_Juge
+	bbs1	IR_Flag,?IR_Level_Juge
 	rts
-?IR_FirstCode_Juge:
+?IR_Level_Juge:
 	lda		IR_Counter
 	cmp		#30
 	bcc		Phase2_NoGuid					; 引导码下溢，判断是否为重复码
@@ -91,7 +90,7 @@ Phase2_NoGuid:
 	lda		IR_Counter
 	cmp		#14
 	bcc		Phase2_Abort					; 重复码下溢，终止收码
-	lda		#20
+	lda		#22
 	cmp		IR_Counter
 	bcc		Phase2_Abort					; 重复码上溢，终止收码
 	lda		Repeat_Counter
@@ -99,13 +98,13 @@ Phase2_NoGuid:
 	bcs		RepeatCounter_NoAdd
 	inc		Repeat_Counter					; 收到重复码递增重复码计数，上限19个
 RepeatCounter_NoAdd:
+	;lda		#5
+	;sta		Interval_Counter				; 刷新重复码间隔超时计数
 	lda		#5
-	sta		Interval_Counter				; 刷新重复码间隔超时计数
-	lda		#0
 	sta		IR_ReceivePhase					; 若收到重复码，收码也算成功，复位收码的相应资源
 	sta		IR_Counter
-	lda		#%00110000
-	and		IR_Flag
+	lda		IR_Flag
+	and		#%00110000
 	sta		IR_Flag
 	rts
 Phase2_Abort:
@@ -122,9 +121,9 @@ Phase2_Abort:
 ; 收码阶段3，检测码元第一个电平时间是否合法
 IR_Receive_Phase_3:
 	IR_RISING_EDGE_JUGE
-	bbs0	IR_Flag,?IR_FirstCode_Juge
+	bbs0	IR_Flag,?IR_Level_Juge
 	rts
-?IR_FirstCode_Juge:
+?IR_Level_Juge:
 	lda		#7
 	cmp		IR_Counter
 	bcc		Phase3_Abort					; 上溢，终止收码
@@ -147,9 +146,9 @@ Phase3_Abort:
 ; 收码阶段4，区分0码和1码，并入队缓冲区，同时判断接收是否完成
 IR_Receive_Phase_4:
 	IR_FALLING_EDGE_JUGE
-	bbs1	IR_Flag,?IR_FirstCode_Juge
+	bbs1	IR_Flag,?IR_Level_Juge
 	rts
-?IR_FirstCode_Juge:
+?IR_Level_Juge:
 	lda		IR_Counter
 	cmp		#2
 	bcc		Phase4_No0Code					; 非0码
@@ -178,6 +177,18 @@ Phase4_Abort:
 	jmp		Receive_Abort
 
 
+IR_Receive_Phase_5:							; 终止码阶段，避免在空闲等待阶段意外进阶段1
+	IR_RISING_EDGE_JUGE
+	bbs0	IR_Flag,?IR_Level_Juge
+	rts
+?IR_Level_Juge:
+	lda		#0
+	sta		IR_ReceivePhase
+	lda		#5
+	sta		Interval_Counter
+	rts
+
+
 Receive_Abort:
 	lda		#0
 	sta		IR_ReceivePhase
@@ -191,6 +202,8 @@ L_Clr_CodeBuffer:
 	sta		IA_Code
 	sta		A_Code
 	sta		Repeat_Counter					; 每次收码失败会断掉连续接收重复码，清空重复码个数计数
+	rmb4	IR_Flag							; 关闭重复码间隔超时计时和计数开关
+	rmb4	Timer_Switch
 	rts
 
 
@@ -209,13 +222,13 @@ Receive_AfterHandle:
 	sta		IR_Counter
 	rts
 Receive_Complete:
-	lda		#0
+	lda		#5
 	sta		IR_ReceivePhase					; 收码阶段重置为阶段0
 	sta		IR_Counter						; 清空计数
 	sta		Repeat_Counter					; 每次收码成功也会断掉连续接收重复码，清空重复码个数计数
-;	lda		#%00010100						; 测试用代码
-	lda		#%00000100						; 复位相关标志位并打开解码标志位
+	lda		#%00010100						; 复位相关标志位并打开解码标志位
 	sta		IR_Flag
+	smb4	Timer_Switch					; 打开32Hz计数开关，开始接收重复码并计数
 	rts
 
 
@@ -232,16 +245,18 @@ RepeatCounter_Handle:
 	beq		Interval_Timeout				; 减到0视为超时
 	lda		Repeat_Counter
 	cmp		#19
-	beq		L_IR_NoLongPress				; 连续收到19个重复码则触发长按功能
+	bcc		L_IR_NoLongPress				; 连续收到19个重复码则触发长按功能
+	bbs5	IR_Flag,?Handle_Exit			; 长按触发每次长按只进一次
 	smb5	IR_Flag							; 长按功能触发，解码程序中会处理长按
 	smb2	Timer_Switch					; 打开4Hz计数开关
-	smb2	Timer_Flag						; 打开4Hz计数开关
+?Handle_Exit:
 	rts
 L_IR_NoLongPress:
 	rmb5	IR_Flag							; 重复码计数没到19个则没有长按功能
 	rmb2	Timer_Switch					; 关闭4Hz计数开关
 	rts
 Interval_Timeout:
+	rmb5	IR_Flag							; 复位长按处理标志
 	jmp		L_Clr_CodeBuffer
 
 
@@ -256,7 +271,7 @@ IR_Receive_Loop:
 	;bne		No_IR_Receiveing				; 测试用代码
 	lda		IR_ReceivePhase
 	beq		No_IR_Receiveing
-	bra		IR_Receive_Loop					; 若当前接收阶段非0，则循环接收直到结束
+	bra		IR_Receive_Loop					; 若当前接收阶段非0，则循环接收直到收码阶段重置为0
 No_IR_Receiveing:
 	jsr		F_IR_Decode						; 红外解码
 	rts
@@ -295,7 +310,7 @@ Compare_DCode_Loop:
 
 ; 跳转至对应功能函数
 IR_KeyHandle:
-	jsr		L_ShutDown_Alarm				; 若此时正在响闹，则关闭闹钟，但不执行功能
+	jsr		L_ShutDown_Alarm				; 若此时正在响闹，则关闭闹钟，但不执行按键功能
 
 	txa
 	clc
@@ -337,7 +352,7 @@ L_IRCode_NoLongPress:						; 非长按功能键
 ?No_LongPress:
 	pla
 	pla
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_ShutDown_Alarm:							; 按键关闭闹钟
@@ -347,7 +362,7 @@ L_ShutDown_Alarm:							; 按键关闭闹钟
 	jsr		L_CloseLoud						; 打断响闹
 	pla
 	pla
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 
@@ -356,7 +371,7 @@ L_IR_Func_OnOff:
 	jsr		L_KeyBeep_ON
 	rmb1	Backlight_Flag					; 关闭PWM调光开关，并关闭所有LED
 	LED_SET_HIGH
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_12_24:
@@ -368,7 +383,7 @@ L_IR_Func_12_24:
 	beq		IR_12_24_Exit					; 显示模式生效
 	jmp		DM_SW_TimeMode					; 调用对应功能函数
 IR_12_24_Exit:
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_Alarm:
@@ -383,7 +398,7 @@ L_IR_Func_Alarm:
 	bbs4	Sys_Status_Flag,IR_Alarm_Exit	; 计时模式无效
 	jmp		SwitchState_AlarmDis			; 显示模式会进入闹显切换
 IR_Alarm_Exit:
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_Inc:
@@ -399,7 +414,7 @@ L_IR_Func_Inc:
 	bbr4	Sys_Status_Flag,IR_Inc_Exit
 	nop										; 计时模式的按键功能
 IR_Inc_Exit:
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_Set:
@@ -415,7 +430,7 @@ L_IR_Func_Set:
 	beq		IR_Set_Exit
 	jmp		SwitchState_AlarmSet
 IR_Set_Exit:
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_Dec:
@@ -431,7 +446,7 @@ L_IR_Func_Dec:
 	bbr4	Sys_Status_Flag,IR_Dec_Exit
 	nop										; 计时模式的按键功能
 IR_Dec_Exit:
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_LightStaue:
@@ -440,7 +455,7 @@ L_IR_Func_LightStaue:
 
 	jsr		LightLevel_Change
 	nop										; 亮度等级显示
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_OK:
@@ -455,7 +470,7 @@ L_IR_Func_OK:
 	bbr4	Sys_Status_Flag,IR_OK_Exit
 	nop										; 计时模式开始计时功能
 IR_OK_Exit:
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_CF:
@@ -471,7 +486,7 @@ L_IR_Func_TimerUp:
 
 	nop										; 进入正计时模式，长按退出到时显
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_TimerDown:
@@ -480,7 +495,7 @@ L_IR_Func_TimerDown:
 ?LongPress_BeepOFF:
 
 	nop										; 进入倒计时模式，长按退出到时显
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_0:
@@ -489,7 +504,7 @@ L_IR_Func_0:
 
 	nop										; 正计时设置位数为0
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_1:
@@ -498,7 +513,7 @@ L_IR_Func_1:
 
 	nop										; 正计时设置位数为1
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_2:
@@ -507,7 +522,7 @@ L_IR_Func_2:
 
 	nop										; 正计时设置位数为2
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_3:
@@ -516,7 +531,7 @@ L_IR_Func_3:
 
 	nop										; 正计时设置位数为3
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_4:
@@ -525,7 +540,7 @@ L_IR_Func_4:
 
 	nop										; 正计时设置位数为4
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_5:
@@ -534,7 +549,7 @@ L_IR_Func_5:
 
 	nop										; 正计时设置位数为5
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_6:
@@ -543,7 +558,7 @@ L_IR_Func_6:
 
 	nop										; 正计时设置位数为6
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_7:
@@ -552,7 +567,7 @@ L_IR_Func_7:
 
 	nop										; 正计时设置位数为7
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_8:
@@ -561,7 +576,7 @@ L_IR_Func_8:
 
 	nop										; 正计时设置位数为8
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 L_IR_Func_9:
@@ -570,7 +585,7 @@ L_IR_Func_9:
 
 	nop										; 正计时设置位数为9
 
-	jmp		L_Send_DRAM						; 按键操作结束刷新显示
+	rts
 
 
 

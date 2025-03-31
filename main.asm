@@ -42,35 +42,42 @@ L_Clear_Ram_Loop:
 	jsr		L_Send_DRAM
 
 ;上电处理
-	rmb4	IER										;  关闭按键中断避免上电过程被打扰
-	lda		#1
+	rmb4	IER										; 关闭按键中断避免上电过程被打扰
+	lda		#0
 	sta		Light_Level
-	smb0	PC										; 初始亮度设置为高亮
+	smb0	PC										; 初始亮度设置为低亮
 	smb0	PC_IO_Backup
 
  	jsr		F_Test_Display							; 上电显示部分
 
 	jsr		F_RFC_MeasureStart						; 上电温度测量
-Wait_RFC_MeasureOver:
-	jsr		F_RFC_MeasureManage
-	bbs0	RFC_Flag,Wait_RFC_MeasureOver
+;Wait_RFC_MeasureOver:
+;	jsr		F_RFC_MeasureManage
+;	bbs0	RFC_Flag,Wait_RFC_MeasureOver
 
 	lda		#$02
 	sta		Beep_Serial
 	smb4	Key_Flag
 	smb3	Timer_Switch
-Loop_BeepTest:										; 响铃1声
-	jsr		F_BeepManage
-	lda		Beep_Serial
-	bne		Loop_BeepTest
+;Loop_BeepTest:										; 响铃1声
+;	jsr		F_BeepManage
+;	bne		Loop_BeepTest
 
-	lda		#0001B
+	lda		#00001B
 	sta		Sys_Status_Flag
 	lda		#0
 	sta		Sys_Status_Ordinal
 
-	smb4	IER										;  上电显示完成，重新开启按键中断
+	smb4	IER										; 上电显示完成，重新开启按键中断
+	jsr		F_Time_Display
+	REFLASH_HALF_SEC								; 上电立刻产生半S更新
+	smb1	Calendar_Flag							; 上电立刻产生日期显示更新
 ; 测试部分
+	;lda		#D_IrChar_Set
+	;sta		D_Code
+	;eor		#$ff
+	;sta		ID_Code
+	;smb2	IR_Flag
 
 	bra		Global_Run
 
@@ -84,15 +91,15 @@ MainLoop:
 	;sta		HALT									; 休眠
 	;rmb4	SYSCLK
 Global_Run:											; 全局生效的功能处理
+	jsr		F_Flash_Display							; 通过标志位决定是否刷新显示
 	;jsr		F_KeyHandler
 	jsr		IR_Receive_Loop							; 红外接收
 	jsr		F_BeepManage
 	;jsr		F_PowerManage
 	jsr		F_Time_Run								; 走时
 	jsr		F_SymbolRegulate
-	jsr		F_Date_Display
+	jsr		F_Date_Display							; 日期和星期更新，日期设置模式下由日期设置更新接管
 	jsr		F_RFC_MeasureManage
-	jsr		F_Flash_Display							; 半S刷新显示
 	;jsr		F_ReturnToDisTime						; 定时返回时显模式
 
 Status_Juge:

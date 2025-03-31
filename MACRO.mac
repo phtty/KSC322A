@@ -57,8 +57,8 @@ IR_RISING_EDGE_JUGE	MACRO
 	and		#$10
 	beq		?No_RisingEdge
 	smb0	IR_Flag
-	lda		#$3c					; 测试用，PA4输出
-	sta		PA
+	;lda		#$3c					; 测试用，PA4输出
+	;sta		PA
 	bra		?RisingEdge_JugeExit
 ?No_RisingEdge:
 	rmb0	IR_Flag
@@ -74,8 +74,8 @@ IR_FALLING_EDGE_JUGE	MACRO
 	and		#$10
 	bne		?No_FallingEdge
 	smb1	IR_Flag
-	lda		#$2c					; 测试用，PA4输出
-	sta		PA
+	;lda		#$2c					; 测试用，PA4输出
+	;sta		PA
 	bra		?FallingEdge_JugeExit
 ?No_FallingEdge:
 	rmb1	IR_Flag
@@ -84,4 +84,14 @@ IR_FALLING_EDGE_JUGE	MACRO
 	bcs		?FallingEdge_JugeExit
 	jmp		Receive_Abort			; 超时终止
 ?FallingEdge_JugeExit:
+	ENDM
+
+
+REFLASH_HALF_SEC	MACRO
+	smb1	Timer_Flag				; 启用一次半S显存更新
+	rmb0	Timer_Flag
+	ENDM
+
+REFLASH_DISPLAY		MACRO
+	smb6	Time_Flag				; 启用一次用5020更新
 	ENDM
