@@ -51,9 +51,9 @@ L_Clear_Ram_Loop:
  	jsr		F_Test_Display							; 上电显示部分
 
 	jsr		F_RFC_MeasureStart						; 上电温度测量
-;Wait_RFC_MeasureOver:
-;	jsr		F_RFC_MeasureManage
-;	bbs0	RFC_Flag,Wait_RFC_MeasureOver
+Wait_RFC_MeasureOver:
+	jsr		F_RFC_MeasureManage
+	bbs0	RFC_Flag,Wait_RFC_MeasureOver
 
 	lda		#$02
 	sta		Beep_Serial
@@ -68,16 +68,14 @@ L_Clear_Ram_Loop:
 	lda		#0
 	sta		Sys_Status_Ordinal
 
-	smb4	IER										; 上电显示完成，重新开启按键中断
-	jsr		F_Time_Display
 	REFLASH_HALF_SEC								; 上电立刻产生半S更新
 	smb1	Calendar_Flag							; 上电立刻产生日期显示更新
+
+	smb4	IER										; 上电显示完成，重新开启按键中断
+
 ; 测试部分
-	;lda		#D_IrChar_Set
-	;sta		D_Code
-	;eor		#$ff
-	;sta		ID_Code
-	;smb2	IR_Flag
+	lda		#%01
+	sta		Alarm_Switch
 
 	bra		Global_Run
 

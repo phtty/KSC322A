@@ -508,7 +508,7 @@ Alarm_Snooze:
 ; 时钟设置下的12、24h模式切换
 ClockSet_SW_TimeMode:
 	lda		Clock_Flag
-	eor		#01									; 翻转12/24h模式的状态
+	eor		#%01								; 翻转12/24h模式的状态
 	sta		Clock_Flag
 
 	jsr		L_Dis_xxHr
@@ -519,7 +519,7 @@ ClockSet_SW_TimeMode:
 ; 显示模式下12、24h模式切换
 DM_SW_TimeMode:
 	lda		Clock_Flag
-	eor		#01									; 翻转12/24h模式的状态
+	eor		#%01								; 翻转12/24h模式的状态
 	sta		Clock_Flag
 
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
@@ -573,7 +573,6 @@ No_CS_MonthAdd:
 AddNum_AS:
 	ldx		Alarm_Group
 	lda		Sys_Status_Ordinal
-	cmp		#0
 	bne		No_AlarmSwitch_AddCHG
 	lda		#1
 	jsr		L_A_LeftShift_XBit
@@ -583,8 +582,11 @@ No_AlarmSwitch_AddCHG:
 	bne		No_AlarmHourSet_Add
 	jmp		L_AlarmHour_Add						; 闹钟小时减数
 No_AlarmHourSet_Add:
+	cmp		#2
+	bne		No_AlarmWorkdaySet_Add
 	jmp		L_AlarmMin_Add						; 闹钟分钟减数
-
+No_AlarmWorkdaySet_Add:
+	jmp		L_AlarmWorkDay_Add
 
 
 
@@ -629,7 +631,11 @@ No_AlarmSwitch_SubCHG:
 	bne		No_AlarmHourSet_Sub
 	jmp		L_AlarmHour_Sub						; 闹钟小时减数
 No_AlarmHourSet_Sub:
+	cmp		#2
+	bne		No_AlarmWorkdaySet_Sub
 	jmp		L_AlarmMin_Sub						; 闹钟分钟减数
+No_AlarmWorkdaySet_Sub:
+	jmp		L_AlarmWorkDay_Sub
 
 
 
@@ -828,8 +834,8 @@ DateDay_Sub_Exit:
 L_Alarm_Switch:
 	eor		Alarm_Switch
 	sta		Alarm_Switch
-	smb1	Timer_Flag
-	rmb0	Timer_Flag
+	;smb1	Timer_Flag
+	;rmb0	Timer_Flag
 	;jsr		F_Alarm_SwitchStatue				; 刷新一次闹钟开关显示
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
@@ -850,8 +856,8 @@ AlarmMin_AddOverflow:
 	lda		#0
 	sta		Alarm_MinAddr,x
 AlarmMin_Add_Exit:
-	smb1	Timer_Flag
-	rmb0	Timer_Flag
+	;smb1	Timer_Flag
+	;rmb0	Timer_Flag
 	;jsr		F_AlarmMin_Set
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
@@ -870,8 +876,8 @@ AlarmMin_SubOverflow:
 	lda		#59
 	sta		Alarm_MinAddr,x
 AlarmMin_Sub_Exit:
-	smb1	Timer_Flag
-	rmb0	Timer_Flag
+	;smb1	Timer_Flag
+	;rmb0	Timer_Flag
 	;jsr		F_AlarmMin_Set
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
@@ -892,8 +898,8 @@ AlarmHour_AddOverflow:
 	lda		#0
 	sta		Alarm_HourAddr,x
 AlarmHour_Add_Exit:
-	smb1	Timer_Flag
-	rmb0	Timer_Flag
+	;smb1	Timer_Flag
+	;rmb0	Timer_Flag
 	;jsr		F_AlarmHour_Set
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
@@ -912,9 +918,45 @@ AlarmHour_SubOverflow:
 	lda		#23
 	sta		Alarm_HourAddr,x
 AlarmHour_Sub_Exit:
-	smb1	Timer_Flag
-	rmb0	Timer_Flag
+	;smb1	Timer_Flag
+	;rmb0	Timer_Flag
 	;jsr		F_AlarmHour_Set
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	rts
+
+
+; 闹钟工作日增加
+; X闹钟组，0~1
+L_AlarmWorkDay_Add:
+	lda		Alarm_WorkDayAddr,x
+	cmp		#2
+	bcs		AlarmWorkDay_AddOverflow
+	clc
+	adc		#1
+	sta		Alarm_WorkDayAddr,x
+	bra		AlarmWorkDay_Add_Exit
+AlarmWorkDay_AddOverflow:
+	lda		#0
+	sta		Alarm_WorkDayAddr,x
+AlarmWorkDay_Add_Exit:
+	REFLASH_HALF_SEC
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	rts
+
+; 闹钟工作日减少
+; X闹钟组，0~1
+L_AlarmWorkDay_Sub:
+	lda		Alarm_WorkDayAddr,x
+	beq		AlarmWorkDay_SubOverflow
+	sec
+	sbc		#1
+	sta		Alarm_WorkDayAddr,x
+	bra		AlarmWorkDay_Sub_Exit
+AlarmWorkDay_SubOverflow:
+	lda		#2
+	sta		Alarm_WorkDayAddr,x
+AlarmWorkDay_Sub_Exit:
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts

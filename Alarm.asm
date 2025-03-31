@@ -149,6 +149,7 @@ L_AlarmMin_Set:
 
 	bbs2	Key_Flag,L_AlarmMin_Display			; 有快加时常亮
 	bbs5	IR_Flag,L_AlarmMin_Display			; 有快加时常亮
+	bbs0	Timer_Flag,L_AlarmMin_Clear
 L_AlarmMin_Display:
 	jsr		F_Display_Alarm
 	REFLASH_DISPLAY								; 置位刷新显示标志位
@@ -182,6 +183,8 @@ L_AlarmWorkDay_Set:
 
 	ldx		Alarm_Group
 	lda		Alarm_WorkDayAddr,x					; 显示对应闹组的工作日
+	clc
+	adc		#5
 	ldx		#led_d3
 	jsr		L_Dis_7Bit_DigitDot
 	REFLASH_DISPLAY								; 置位刷新显示标志位
@@ -213,6 +216,7 @@ L_LoudingNoClose:
 	sta		AlarmLoud_Counter
 	rts
 
+
 L_IS_AlarmTrigger:
 	lda		Alarm_Switch
 	bne		Alarm_Juge_Start					; 没有任何闹钟开启则不会判断闹钟是否触发
@@ -221,11 +225,14 @@ L_IS_AlarmTrigger:
 Alarm_Juge_Start:
 	bbs2	Clock_Flag,L_AlarmTrigger_Exit		; 如此时仍在响闹，则不判断闹钟是否触发
 	jsr		Is_Alarm_Trigger					; 判断两组闹钟触发
+	bbs1	Clock_Flag,L_AlarmTrigger
+	rts
 L_AlarmTrigger:
 	jsr		F_RFC_Abort							; 避免响闹时电压不稳终止RFC采样
 	smb1	Time_Flag
+	smb3	Timer_Switch						; 开启21Hz蜂鸣间隔定时
 	smb2	Clock_Flag							; 开启响闹模式
-	rmb1 	Clock_Flag							; 关闭闹钟触发标志，避免重复进闹钟触发
+	rmb1	Clock_Flag							; 关闭闹钟触发标志，避免重复进闹钟触发
 L_AlarmTrigger_Exit:
 	rts
 
@@ -245,7 +252,6 @@ L_CloseLoud:									; 结束并关闭响闹
 
 	rmb3	Timer_Flag
 	rmb1	Time_Flag
-	rmb0	TMRC
 L_LoudingJuge_Exit:
 	rts
 
