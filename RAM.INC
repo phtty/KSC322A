@@ -11,6 +11,7 @@ Time_Addr		EQU		RamStarAddr+Time_Str_Addr-Page0RamStarAddr		;事件相关数据的地址
 Alarm_MinAddr	EQU		RamStarAddr+Alarm_Min_Addr-Page0RamStarAddr		;闹钟组分钟数据地址
 Alarm_HourAddr	EQU		RamStarAddr+Alarm_Hour_Addr-Page0RamStarAddr	;闹钟组小时数据地址
 Alarm_WorkDayAddr	EQU	RamStarAddr+AL_WorkDay_Addr-Page0RamStarAddr	;闹钟组工作日数据地址
+TimekeepAddr	EQU		RamStarAddr+Timekeep_Addr-Page0RamStarAddr	;闹钟组小时数据地址
 ;***************************************
 ;Time_Addr		EUQ		B0H
 ;***************************************
@@ -51,6 +52,7 @@ Backlight_Counter		DS		1
 Return_Counter			DS		1
 Return_MaxTime			DS		1
 AlarmLoud_Counter		DS		1
+TimekeepLoud_Counter	DS		1
 IR_Counter				DS		1
 Code_Counter			DS		1
 Repeat_Counter			DS		1
@@ -164,6 +166,23 @@ IR_ReceivePhase			DS		1
 ;2	接收阶段2，引导码/重复码的第二个电平
 ;3	接收阶段3，码元的第一个电平
 ;4	接收阶段4，码元的第二个电平
+;5	接收阶段5，等待结束码
+
+IR_DepressJuge			DS		1
+;bit0 = 1 OK键松键处理标志
+;bit1 = 1 正计时键松键处理标志
+;bit2 = 1 倒计时键松键处理标志
+
+Timekeep_Flag			DS		1
+;bit0 = 1 计时开启
+;bit1 = 1 倒计时完成标志
+;bit2 = 1 
+
+Timekeep_NumberSet		DS		1
+;0	设置分钟十位
+;1	设置分钟个位
+;2	设置秒十位
+;3	设置秒个位
 
 Backlight_Flag			DS		1
 ;bit0 = 1 DC5V接入时唤醒
@@ -222,23 +241,30 @@ PD_IO_Backup			DS		1
 
 ;---------------------------------------
 Time_Str_Addr			EQU		$
-R_Time_Sec				DS		1	;时间秒
-R_Time_Min				DS		1	;时间分
-R_Time_Hour				DS		1	;时间小时
-R_Alarm_Min				DS		1	;触发闹钟分
-R_Alarm_Hour			DS		1	;触发闹钟小时
-R_Date_Day				DS		1	;日期，从1开始
-R_Date_Month			DS		1	;月份，从1开始
-R_Date_Year				DS		1	;年份，由于只计2000-2099，所以由0-99代替
-R_Date_Week				DS		1	;星期数，从1开始
+R_Time_Sec				DS		1	; 时间秒
+R_Time_Min				DS		1	; 时间分
+R_Time_Hour				DS		1	; 时间小时
+R_Alarm_Min				DS		1	; 触发闹钟分
+R_Alarm_Hour			DS		1	; 触发闹钟小时
+R_Date_Day				DS		1	; 日期，从1开始
+R_Date_Month			DS		1	; 月份，从1开始
+R_Date_Year				DS		1	; 年份，由于只计2000-2099，所以由0-99代替
+R_Date_Week				DS		1	; 星期数，从1开始
 
 Alarm_Min_Addr			EQU		$
-R_Alarm1_Min			DS		1	;闹钟1分
-R_Alarm2_Min			DS		1	;闹钟2分
+R_Alarm1_Min			DS		1	; 闹钟1分
+R_Alarm2_Min			DS		1	; 闹钟2分
 
 Alarm_Hour_Addr			EQU		$
-R_Alarm1_Hour			DS		1	;闹钟1小时
-R_Alarm2_Hour			DS		1	;闹钟2小时
+R_Alarm1_Hour			DS		1	; 闹钟1小时
+R_Alarm2_Hour			DS		1	; 闹钟2小时
+
+Timekeep_Addr			EQU		$
+R_Timekeep_Min			DS		1	; 计时模式分钟
+R_Timekeep_Sec			DS		1	; 计时模式秒
+
+R_TimekeepBak_Min		DS		1	; 倒计时的计时备份
+R_TimekeepBak_Sec		DS		1	; 倒计时的计时备份
 
 ;---------------------------------------       
 P_Temp					DS		8

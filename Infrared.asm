@@ -48,9 +48,9 @@ IR_Receive_Phase_1:
 	rts
 ?IR_Level_Juge:
 	lda		IR_Counter
-	cmp		#60
+	cmp		#50
 	bcc		Phase1_Abort					; 下溢，终止收码
-	lda		#80
+	lda		#95
 	cmp		IR_Counter
 	bcc		Phase1_Abort					; 上溢，终止收码
 	lda		#2
@@ -59,13 +59,15 @@ IR_Receive_Phase_1:
 	sta		IR_Counter
 	rts
 Phase1_Abort:
-;	bbs5	IR_Flag,?No_Mark				; 测试用代码
-;	smb0	IR_Test
-;	lda		IR_Counter
-;	sta		Counter_Bak
-;	lda		Code_Counter
-;	sta		Counter_Bak2
-;?No_Mark:
+	lda		#$3c					; 测试用，PA4输出高
+	sta		PA
+	lda		#$2c					; 测试用，PA4输出低
+	sta		PA
+	nop
+	nop
+	nop
+	lda		#$3c					; 测试用，PA4输出高
+	sta		PA
 	jmp		Receive_Abort
 
 
@@ -76,9 +78,9 @@ IR_Receive_Phase_2:
 	rts
 ?IR_Level_Juge:
 	lda		IR_Counter
-	cmp		#30
+	cmp		#32
 	bcc		Phase2_NoGuid					; 引导码下溢，判断是否为重复码
-	lda		#38
+	lda		#40
 	cmp		IR_Counter
 	bcc		Phase2_Abort					; 引导码上溢，终止收码
 	lda		#3
@@ -88,9 +90,9 @@ IR_Receive_Phase_2:
 	rts
 Phase2_NoGuid:
 	lda		IR_Counter
-	cmp		#14
+	cmp		#8
 	bcc		Phase2_Abort					; 重复码下溢，终止收码
-	lda		#22
+	lda		#28
 	cmp		IR_Counter
 	bcc		Phase2_Abort					; 重复码上溢，终止收码
 	lda		Repeat_Counter
@@ -98,8 +100,9 @@ Phase2_NoGuid:
 	bcs		RepeatCounter_NoAdd
 	inc		Repeat_Counter					; 收到重复码递增重复码计数，上限19个
 RepeatCounter_NoAdd:
-	;lda		#5
-	;sta		Interval_Counter				; 刷新重复码间隔超时计数
+	lda		#8
+	sta		Interval_Counter				; 刷新重复码间隔超时计数
+
 	lda		#5
 	sta		IR_ReceivePhase					; 若收到重复码，收码也算成功，复位收码的相应资源
 	sta		IR_Counter
@@ -108,13 +111,6 @@ RepeatCounter_NoAdd:
 	sta		IR_Flag
 	rts
 Phase2_Abort:
-;	bbs5	IR_Flag,?No_Mark				; 测试用代码
-;	smb1	IR_Test
-;	lda		IR_Counter
-;	sta		Counter_Bak
-;	lda		Code_Counter
-;	sta		Counter_Bak2
-;?No_Mark:
 	jmp		Receive_Abort
 
 
@@ -133,13 +129,6 @@ IR_Receive_Phase_3:
 	sta		IR_Counter
 	rts
 Phase3_Abort:
-;	bbs5	IR_Flag,?No_Mark				; 测试用
-;	smb2	IR_Test
-;	lda		IR_Counter
-;	sta		Counter_Bak
-;	lda		Code_Counter
-;	sta		Counter_Bak2
-;?No_Mark:
 	jmp		Receive_Abort
 
 
@@ -167,24 +156,18 @@ Phase4_No0Code:
 	sec										; 入队1码
 	jmp		Receive_AfterHandle				; 收码1bit的后处理
 Phase4_Abort:
-;	bbs5	IR_Flag,?No_Mark				; 测试用代码
-;	smb3	IR_Test
-;	lda		IR_Counter
-;	sta		Counter_Bak
-;	lda		Code_Counter
-;	sta		Counter_Bak2
-;?No_Mark:
 	jmp		Receive_Abort
 
 
-IR_Receive_Phase_5:							; 终止码阶段，避免在空闲等待阶段意外进阶段1
+; 收码阶段5，等待终止码结束，避免在空闲等待阶段意外进阶段1
+IR_Receive_Phase_5:
 	IR_RISING_EDGE_JUGE
 	bbs0	IR_Flag,?IR_Level_Juge
 	rts
 ?IR_Level_Juge:
 	lda		#0
 	sta		IR_ReceivePhase
-	lda		#5
+	lda		#8
 	sta		Interval_Counter
 	rts
 
@@ -193,7 +176,6 @@ Receive_Abort:
 	lda		#0
 	sta		IR_ReceivePhase
 	sta		IR_Counter						; 清空计数
-;	lda		#%00100000						; 测试用代码
 	sta		IR_Flag
 L_Clr_CodeBuffer:
 	lda		#0
@@ -256,19 +238,62 @@ L_IR_NoLongPress:
 	rmb2	Timer_Switch					; 关闭4Hz计数开关
 	rts
 Interval_Timeout:
+	jsr		DepressKey_Handle				; 松键处理
 	rmb5	IR_Flag							; 复位长按处理标志
 	jmp		L_Clr_CodeBuffer
 
 
 
 
-; 主循环调用收码时，在主循环调用该函数即可
+; 松键有效的按键功能
+DepressKey_Handle:
+	lda		IR_DepressJuge
+	bne		DepressKey_Handle_Start
+	rts
+DepressKey_Handle_Start:
+	bbs0	IR_DepressJuge,OK_DepressFunc
+	bbs1	IR_DepressJuge,TimeUp_DepressFunc
+	bbs2	IR_DepressJuge,TimeDown_DepressFunc
+	rts
+
+OK_DepressFunc:
+	rmb0	IR_DepressJuge
+	lda		Sys_Status_Ordinal
+	bne		?TimeDown_FuncOK
+	jmp		Timekeep_Pause_Continue			; 正计时模式直接启停计时
+?TimeDown_FuncOK:
+	lda		R_Timekeep_Min
+	beq		?TimeDown_NoFuncOK
+	lda		R_Timekeep_Min
+	beq		?TimeDown_NoFuncOK
+	jmp		Timekeep_Pause_Continue			; 倒计时模式在不为0时才会启停计时
+?TimeDown_NoFuncOK
+	rts
+
+TimeUp_DepressFunc:
+	rmb1	IR_DepressJuge
+	bbs0	Sys_Status_Ordinal,?TimeUp_NoFunc_TimeUp
+	bbs0	Timekeep_Flag,?TimeUp_NoFunc_TimeUp
+	jmp		SwitchState_TimeUpMode			; 倒计时模式未启用计时状态下，切换到正计时模式
+?TimeUp_NoFunc_TimeUp:
+	rts
+
+TimeDown_DepressFunc:
+	rmb2	IR_DepressJuge
+	bbs0	Sys_Status_Ordinal,?TimeDown_NoFunc_TimeDown
+	bbs0	Timekeep_Flag,?TimeDown_NoFunc_TimeDown
+	jmp		SwitchState_TimeDownMode		; 正计时模式未启用计时状态下，切换到倒计时模式
+?TimeDown_NoFunc_TimeDown:
+	rts
+
+
+
+
+
+; 主循环方式收码时，在主循环的全局功能部分调用该函数即可
 ; 收码完成或者终止时退出循环
 IR_Receive_Loop:
 	jsr		IR_ReceiveHandle				; 红外接收
-	;bbs4	IR_Flag,No_IR_Receiveing
-	;lda		IR_Test
-	;bne		No_IR_Receiveing				; 测试用代码
 	lda		IR_ReceivePhase
 	beq		No_IR_Receiveing
 	bra		IR_Receive_Loop					; 若当前接收阶段非0，则循环接收直到收码阶段重置为0
@@ -310,7 +335,7 @@ Compare_DCode_Loop:
 
 ; 跳转至对应功能函数
 IR_KeyHandle:
-	jsr		L_ShutDown_Alarm				; 若此时正在响闹，则关闭闹钟，但不执行按键功能
+	jsr		L_ShutDown_Loud					; 若此时正在响闹，则关闭闹钟，但不执行按键功能
 
 	txa
 	clc
@@ -346,137 +371,182 @@ IR_Func_JumpTable:
 	dw		L_IR_Func_9-1
 
 
-L_IRCode_NoLongPress:						; 非长按功能键
-	bbs5	IR_Flag,?No_LongPress
-	rts
-?No_LongPress:
-	pla
-	pla
-	rts
+IR_ShutDown_KeyScan:
+	jmp		Interval_Timeout
 
 
-L_ShutDown_Alarm:							; 按键关闭闹钟
+L_ShutDown_Loud:							; 按键关闭闹钟
 	bbs2	Clock_Flag,?No_AlarmLouding
+	bbs1	Timekeep_Flag,?No_TimekeepLouding
 	rts
 ?No_AlarmLouding:
 	jsr		L_CloseLoud						; 打断响闹
 	pla
 	pla
-	rts
+	jmp		IR_ShutDown_KeyScan
+?No_TimekeepLouding:
+	jsr		CloseBeep						; 打断响闹
+	pla
+	pla
+	jmp		IR_ShutDown_KeyScan
+
 
 
 
 L_IR_Func_OnOff:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON
-	rmb1	Backlight_Flag					; 关闭PWM调光开关，并关闭所有LED
+	lda		#%0010
+	sta		Backlight_Flag					; 翻转PWM调光开关，并关闭所有LED
+	smb2	Backlight_Flag
 	LED_SET_HIGH
-	rts
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+
+
 
 
 L_IR_Func_12_24:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
 	lda		Sys_Status_Flag
-	and		#%00011
-	beq		IR_12_24_Exit					; 显示模式生效
-	jmp		DM_SW_TimeMode					; 调用对应功能函数
+	and		#%01100
+	beq		?No_DisMode						; 显示模式生效
+	jsr		Return_CD_Mode					; 设置模式下会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?No_DisMode:
+	bbs4	Sys_Status_Flag,IR_12_24_Exit	; 计时模式下此按键无功能
+	jsr		DM_SW_TimeMode					; 非设置模式切换12/24模式
 IR_12_24_Exit:
-	rts
+	jmp		IR_ShutDown_KeyScan
+
+
 
 
 L_IR_Func_Alarm:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
 	lda		Sys_Status_Flag
 	and		#%01100
 	beq		?No_SetMode
-	jmp		Return_CD_Mode					; 设置模式会返回时显
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 ?No_SetMode:
 	bbs4	Sys_Status_Flag,IR_Alarm_Exit	; 计时模式无效
-	jmp		SwitchState_AlarmDis			; 显示模式会进入闹显切换
+	jsr		SwitchState_AlarmDis			; 显示模式会进入闹显切换
 IR_Alarm_Exit:
-	rts
+	jmp		IR_ShutDown_KeyScan
+
+
 
 
 L_IR_Func_Inc:
 	bbs5	IR_Flag,?LongPress_BeepOFF
 	jsr		L_KeyBeep_ON					; 只有第一下有按键音
 ?LongPress_BeepOFF:
+	lda		Sys_Status_Flag
+	and		#%10011
+	beq		?SetMode
+	jmp		IR_ShutDown_KeyScan				; 非设置模式此按键无效
+?SetMode:
 	bbr2	Sys_Status_Flag,?No_CS_Mode
 	jmp		AddNum_CS						; 时设模式增数
 ?No_CS_Mode:
 	bbr3	Sys_Status_Flag,?No_AS_Mode
 	jmp		AddNum_AS						; 闹设模式增数
 ?No_AS_Mode:
-	bbr4	Sys_Status_Flag,IR_Inc_Exit
-	nop										; 计时模式的按键功能
-IR_Inc_Exit:
-	rts
+	jmp		IR_ShutDown_KeyScan
+
+
 
 
 L_IR_Func_Set:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 	lda		Sys_Status_Flag
 	and		#%00101							; 时钟模式切换到设置模式
 	beq		?No_CS_Mode
-	jmp		SwitchState_ClockSet
+	jsr		SwitchState_ClockSet
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 ?No_CS_Mode:
 	lda		Sys_Status_Flag
 	and		#%01010							; 闹钟模式切换到设置模式
 	beq		IR_Set_Exit
-	jmp		SwitchState_AlarmSet
+	jsr		SwitchState_AlarmSet
 IR_Set_Exit:
-	rts
+	jmp		IR_ShutDown_KeyScan
+
+
 
 
 L_IR_Func_Dec:
 	bbs5	IR_Flag,?LongPress_BeepOFF
 	jsr		L_KeyBeep_ON					; 只有第一下有按键音
 ?LongPress_BeepOFF:
+	lda		Sys_Status_Flag
+	and		#%10011
+	beq		?SetMode
+	jmp		IR_ShutDown_KeyScan				; 非设置模式此按键无效
+?SetMode:
 	bbr2	Sys_Status_Flag,?No_CS_Mode
 	jmp		SubNum_CS						; 时设模式减数
 ?No_CS_Mode:
 	bbr3	Sys_Status_Flag,?No_AS_Mode
 	jmp		SubNum_AS						; 闹设模式减数
 ?No_AS_Mode:
-	bbr4	Sys_Status_Flag,IR_Dec_Exit
-	nop										; 计时模式的按键功能
-IR_Dec_Exit:
-	rts
+	jmp		IR_ShutDown_KeyScan
+
+
 
 
 L_IR_Func_LightStaue:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
 	jsr		LightLevel_Change
 	nop										; 亮度等级显示
-	rts
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+
+
 
 
 L_IR_Func_OK:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
-	jsr		L_KeyBeep_ON					; 按键音
+	bbs5	IR_Flag,?LongPress_BeepOFF
+	jsr		L_KeyBeep_ON					; 只有一声按键音
+?LongPress_BeepOFF
 
+	bbs4	Sys_Status_Flag,FuncOK_TimekeepMode
 	lda		Sys_Status_Flag
 	and		#%01100
 	beq		?No_SetMode
-	jmp		Return_CD_Mode					; 设置模式会返回时显
+	jsr		Return_CD_Mode					; 设置模式会返回时显
 ?No_SetMode:
-	bbr4	Sys_Status_Flag,IR_OK_Exit
-	nop										; 计时模式开始计时功能
-IR_OK_Exit:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次
+FuncOK_TimekeepMode:
+	bbr5	IR_Flag,?LongPress_Trigger
+	smb0	IR_DepressJuge					; 未长按时，置位松键处理标志
 	rts
+?LongPress_Trigger:
+	rmb0	IR_DepressJuge					; 若长按，复位松键处理标志
+	bbr0	Timekeep_Flag,?TimekeepON		; 清空只在计时未启用时生效
+	jsr		Timekeep_ClearCount
+?TimekeepON:
+	jmp		IR_ShutDown_KeyScan				; 长按功能只执行1次
+
+
 
 
 L_IR_Func_CF:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
-	jmp		TemperMode_Change
+	bbs4	Sys_Status_Flag,IR_CF_Exit		; 该按键计时模式无功能
+	lda		Sys_Status_Flag
+	and		#%01100
+	beq		?No_SetMode
+	jsr		Return_CD_Mode					; 设置模式此按键会返回时显
+	jmp		IR_ShutDown_KeyScan
+?No_SetMode:
+	jsr		TemperMode_Change
+	bra		IR_CF_Exit
+IR_CF_Exit:
+	jmp		IR_ShutDown_KeyScan
+
+
 
 
 L_IR_Func_TimerUp:
@@ -484,9 +554,25 @@ L_IR_Func_TimerUp:
 	jsr		L_KeyBeep_ON					; 只有第一下有按键音
 ?LongPress_BeepOFF:
 
-	nop										; 进入正计时模式，长按退出到时显
-
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		Func_TimeUp_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+Func_TimeUp_Effect:
+	bbs4	Sys_Status_Flag,TimeKeep_UpMode
+	jsr		SwitchState_TimeUpMode			; 切换到正计时模式
+	jmp		IR_ShutDown_KeyScan				; 按键功能只执行1次
+TimeKeep_UpMode:
+	bbs5	IR_Flag,?LongPress_Trigger
+	smb1	IR_DepressJuge
 	rts
+?LongPress_Trigger:
+	rmb1	IR_DepressJuge
+	jsr		Return_CD_Mode					; 返回时显
+	jmp		IR_ShutDown_KeyScan				; 长按功能只执行1次
+
+
 
 
 L_IR_Func_TimerDown:
@@ -494,251 +580,200 @@ L_IR_Func_TimerDown:
 	jsr		L_KeyBeep_ON					; 只有第一下有按键音
 ?LongPress_BeepOFF:
 
-	nop										; 进入倒计时模式，长按退出到时显
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		Func_TimeDown_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+Func_TimeDown_Effect:
+	bbs4	Sys_Status_Flag,TimeKeep_DownMode
+	jsr		SwitchState_TimeDownMode		; 切换到倒计时模式
+	jmp		IR_ShutDown_KeyScan				; 按键功能只执行1次
+TimeKeep_DownMode:
+	bbs5	IR_Flag,?LongPress_Trigger
+	smb2	IR_DepressJuge
 	rts
+?LongPress_Trigger:
+	rmb2	IR_DepressJuge
+	jsr		Return_CD_Mode					; 返回时显
+	jmp		IR_ShutDown_KeyScan				; 长按功能只执行1次
+
+
 
 
 L_IR_Func_0:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
-	nop										; 正计时设置位数为0
-
-	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#0
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_1:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
-	jsr		L_KeyBeep_ON					; 按键音
-
-	nop										; 正计时设置位数为1
-
-	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#1
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_2:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
-
-	nop										; 正计时设置位数为2
-
-	rts
+	
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#2
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_3:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
-	nop										; 正计时设置位数为3
-
-	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#3
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_4:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
-	nop										; 正计时设置位数为4
-
-	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#4
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_5:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
-	nop										; 正计时设置位数为5
-
-	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#5
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_6:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
-	nop										; 正计时设置位数为6
-
-	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#6
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_7:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
-	nop										; 正计时设置位数为7
-
-	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#7
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_8:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
-	nop										; 正计时设置位数为8
-
-	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#8
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
 L_IR_Func_9:
-	jsr		L_IRCode_NoLongPress			; 该按键无长按功能
 	jsr		L_KeyBeep_ON					; 按键音
 
-	nop										; 正计时设置位数为9
-
-	rts
-
-
-
-
-;IR_Test_1:
-;	bbs4	IR_Flag,Receive_Complete_1
-;	rts
-;Receive_Complete_1:
-;	rmb4	IR_Flag
-;
-;	ldx		#led_Month
-;	jsr		F_ClrSymbol
-;	ldx		#led_Date
-;	jsr		F_DisSymbol
-;
-;	lda		A_Code
-;	jsr		L_A_DecToHex
-;	pha
-;	and		#$0f
-;	ldx		#led_d1
-;	jsr		L_Dis_7Bit_DigitDot
-;	pla
-;	and		#$f0
-;	jsr		L_LSR_4Bit
-;	ldx		#led_d0
-;	jsr		L_Dis_7Bit_DigitDot
-;
-;	lda		IA_Code
-;	jsr		L_A_DecToHex
-;	pha
-;	and		#$0f
-;	ldx		#led_d3
-;	jsr		L_Dis_7Bit_DigitDot
-;	pla
-;	and		#$f0
-;	jsr		L_LSR_4Bit
-;	ldx		#led_d2
-;	jsr		L_Dis_7Bit_DigitDot
-;
-;	lda		D_Code
-;	jsr		L_A_DecToHex
-;	pha
-;	and		#$0f
-;	ldx		#led_d6
-;	jsr		L_Dis_7Bit_DigitDot
-;	pla
-;	and		#$f0
-;	jsr		L_LSR_4Bit
-;	ldx		#led_d5
-;	jsr		L_Dis_7Bit_DigitDot
-;
-;	lda		ID_Code
-;	jsr		L_A_DecToHex
-;	pha
-;	and		#$0f
-;	ldx		#led_d10
-;	jsr		L_Dis_7Bit_DigitDot
-;	pla
-;	and		#$f0
-;	jsr		L_LSR_4Bit
-;	ldx		#led_d9
-;	jsr		L_Dis_7Bit_DigitDot
-;
-;	jsr		L_Send_DRAM
-;	rts
-
-
-;IR_Test_2:
-;	lda		IR_Test
-;	bne		Receive_Abort_1
-;	rts
-;Receive_Abort_1:
-;	ldx		#led_Month
-;	jsr		F_DisSymbol
-;
-;	bbr0	IR_Test,NoPhase1
-;	rmb0	IR_Test
-;	ldx		#led_MON1
-;	jsr		F_DisSymbol
-;	ldx		#led_TUE1
-;	jsr		F_ClrSymbol
-;	ldx		#led_WED1
-;	jsr		F_ClrSymbol
-;	ldx		#led_THU1
-;	jsr		F_ClrSymbol
-;	bra		Juge_Over
-;NoPhase1:
-;	bbr1	IR_Test,NoPhase2
-;	rmb1	IR_Test
-;	ldx		#led_MON1
-;	jsr		F_ClrSymbol
-;	ldx		#led_TUE1
-;	jsr		F_DisSymbol
-;	ldx		#led_WED1
-;	jsr		F_ClrSymbol
-;	ldx		#led_THU1
-;	jsr		F_ClrSymbol
-;	bra		Juge_Over
-;NoPhase2:
-;	bbr2	IR_Test,NoPhase3
-;	rmb2	IR_Test
-;	ldx		#led_MON1
-;	jsr		F_ClrSymbol
-;	ldx		#led_TUE1
-;	jsr		F_ClrSymbol
-;	ldx		#led_WED1
-;	jsr		F_DisSymbol
-;	ldx		#led_THU1
-;	jsr		F_ClrSymbol
-;	bra		Juge_Over
-;NoPhase3:
-;	rmb3	IR_Test
-;	ldx		#led_MON1
-;	jsr		F_ClrSymbol
-;	ldx		#led_TUE1
-;	jsr		F_ClrSymbol
-;	ldx		#led_WED1
-;	jsr		F_ClrSymbol
-;	ldx		#led_THU1
-;	jsr		F_DisSymbol
-;Juge_Over:
-;
-;	lda		Counter_Bak
-;	jsr		L_A_DecToHex
-;	pha
-;	txa
-;	ldx		#led_d0
-;	jsr		L_Dis_7Bit_DigitDot
-;	pla
-;	pha
-;	and		#$0f
-;	ldx		#led_d2
-;	jsr		L_Dis_7Bit_DigitDot
-;	pla
-;	and		#$f0
-;	jsr		L_LSR_4Bit
-;	ldx		#led_d1
-;	jsr		L_Dis_7Bit_DigitDot
-;
-;	lda		#32
-;	sec
-;	sbc		Counter_Bak2
-;	jsr		L_A_DecToHex
-;	pha
-;	and		#$0f
-;	ldx		#led_d6
-;	jsr		L_Dis_7Bit_DigitDot
-;	pla
-;	and		#$f0
-;	jsr		L_LSR_4Bit
-;	ldx		#led_d5
-;	jsr		L_Dis_7Bit_DigitDot
-;
-;	jsr		L_Send_DRAM
-;?Test_Over
-;	rts
+	lda		Sys_Status_Flag
+	and		#%10011
+	bne		?Func_Effect
+	jsr		Return_CD_Mode					; 设置模式会返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+?Func_Effect:
+	bbr4	Sys_Status_Flag,?Display_Mode	; 显示模式不执行任何操作
+	lda		Sys_Status_Flag
+	lda		#9
+	sta		P_Temp
+	jsr		Timekeep_NumSet
+?Display_Mode:
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能

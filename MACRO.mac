@@ -57,7 +57,7 @@ IR_RISING_EDGE_JUGE	MACRO
 	and		#$10
 	beq		?No_RisingEdge
 	smb0	IR_Flag
-	;lda		#$3c					; 测试用，PA4输出
+	;lda		#$3c					; 测试用，PA4输出高
 	;sta		PA
 	bra		?RisingEdge_JugeExit
 ?No_RisingEdge:
@@ -74,7 +74,7 @@ IR_FALLING_EDGE_JUGE	MACRO
 	and		#$10
 	bne		?No_FallingEdge
 	smb1	IR_Flag
-	;lda		#$2c					; 测试用，PA4输出
+	;lda		#$2c					; 测试用，PA4输出低
 	;sta		PA
 	bra		?FallingEdge_JugeExit
 ?No_FallingEdge:
@@ -95,3 +95,6 @@ REFLASH_HALF_SEC	MACRO
 REFLASH_DISPLAY		MACRO
 	smb6	Time_Flag				; 启用一次用5020更新
 	ENDM
+
+
+

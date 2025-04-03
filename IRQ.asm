@@ -94,12 +94,8 @@ I_PaIRQ_Handler:
 	smb0	Key_Flag
 	smb1	Key_Flag						; 首次触发
 	rmb2	Key_Flag						; 如果有新的下降沿到来，清快加标志位
-	;rmb4	Timer_Flag						; 清32Hz标志位
-	;smb4	Timer_Switch					; 打开快加定时
-
-	;rmb5	IR_Flag
-	;jsr		F_ClearScreen				; 测试用代码
-	;jsr		L_Send_DRAM
+	rmb4	Timer_Flag						; 清32Hz标志位
+	smb4	Timer_Switch					; 打开快加定时
 
 	jmp		L_EndIrq
 
@@ -112,7 +108,6 @@ I_LcdIRQ_Handler:
 	lda		#0
 	sta		Counter_2Hz
 	smb1	Timer_Flag						; 2Hz标志
-	smb6	Time_Flag						; 半S刷新1次显示
 
 	smb1	Symbol_Flag
 

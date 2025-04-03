@@ -195,7 +195,6 @@ L_KeyDTrigger:
 	jsr		L_Universal_TriggerHandle			; 通用按键处理
 
 	bbr2	Clock_Flag,StatusLM_No_KeyD
-	jsr		Alarm_Snooze						; 响闹时贪睡处理
 	jmp		L_KeyExit
 StatusLM_No_KeyD:
 	bbs2	Key_Flag,L_DisMode_KeyD_LongTri
@@ -456,6 +455,44 @@ L_Ordinal_Exit_AS:
 
 
 
+; 切换到正计时模式
+SwitchState_TimeUpMode:
+	lda		#%10000
+	sta		Sys_Status_Flag
+	lda		#0
+	sta		Sys_Status_Ordinal
+	sta		Timekeep_Flag
+	sta		R_Timekeep_Min
+	sta		R_Timekeep_Sec
+	sta		R_TimekeepBak_Min
+	sta		R_TimekeepBak_Sec
+	sta		Timekeep_NumberSet
+	jsr		F_ClearScreen
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	REFLASH_HALF_SEC
+	rts
+
+
+; 切换到倒计时模式
+SwitchState_TimeDownMode:
+	lda		#%10000
+	sta		Sys_Status_Flag
+	lda		#1
+	sta		Sys_Status_Ordinal
+	sta		Timekeep_Flag
+	sta		R_Timekeep_Min
+	sta		R_Timekeep_Sec
+	sta		R_TimekeepBak_Min
+	sta		R_TimekeepBak_Sec
+	sta		Timekeep_NumberSet
+	jsr		F_ClearScreen
+	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	REFLASH_HALF_SEC
+	rts
+
+
+
+
 ; 切换三档灯光亮度
 ; 0低亮，1半亮，2高亮
 LightLevel_Change:
@@ -471,35 +508,6 @@ LightLevel_Auto:
 	smb3	Backlight_Flag
 	nop											; 切换至自动亮度
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
-	rts
-
-
-
-
-; 进入贪睡模式
-Alarm_Snooze:
-;	smb6	Clock_Flag							; 贪睡按键触发						
-;	smb3	Clock_Flag							; 进入贪睡模式
-;	rmb2	Clock_Flag							; 关闭响闹模式
-;
-;	lda		R_Snooze_Min						; 贪睡闹钟的时间加5
-;	clc
-;	adc		#5
-;	cmp		#60
-;	bcs		L_Snooze_OverflowMin
-;	sta		R_Snooze_Min
-;	bra		L_Snooze_Exit
-;L_Snooze_OverflowMin:
-;	sec
-;	sbc		#60
-;	sta		R_Snooze_Min						; 产生贪睡响闹的分钟进位
-;	inc		R_Snooze_Hour
-;	lda		R_Snooze_Hour
-;	cmp		#24
-;	bcc		L_Snooze_Exit
-;	lda		#00									; 产生贪睡小时进位
-;	sta		R_Snooze_Hour
-;L_Snooze_Exit:
 	rts
 
 
@@ -959,6 +967,68 @@ AlarmWorkDay_SubOverflow:
 AlarmWorkDay_Sub_Exit:
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	rts
+
+
+
+
+; 倒计时模式设置计时时间
+Timekeep_NumSet:
+	lda		Timekeep_NumberSet
+	ror											; 通过Timekeep_NumberSet的第一位判断是设置十位还是个位
+	bcs		SetSingle_Number
+	tax											; 设置分/秒的十位数
+	lda		P_Temp
+	jsr		L_LSR_4Bit
+	sta		P_Temp								; 设置的数字左移到十位
+
+	lda		TimekeepAddr,x
+	and		#$0f
+	ora		P_Temp
+	sta		TimekeepAddr,x
+	bra		NumSet_Inc
+SetSingle_Number:								; 设置分/秒的个位数
+	tax
+	lda		TimekeepAddr,x
+	and		#$f0
+	ora		P_Temp
+	sta		TimekeepAddr,x
+NumSet_Inc:
+	inc		Timekeep_NumberSet					; 每次设置完后递增Timekeep_NumberSet
+	lda		Timekeep_NumberSet
+	cmp		#4
+	bcc		NumSet_Exit
+	lda		#0
+	sta		Timekeep_NumberSet					; 溢出后回到0
+NumSet_Exit:
+	rts
+
+
+
+
+; 计时模式下启停计时
+Timekeep_Pause_Continue:
+	lda		Timekeep_Flag
+	eor		#%01
+	sta		Timekeep_Flag
+
+	bbr0	Sys_Status_Ordinal,TimeDown_BakOver
+	bbs0	Timekeep_Flag,TimeDown_BakOver
+	lda		R_Timekeep_Min						; 倒计时模式下若计时开始，会备份一次初值，若计时完成会还原
+	sta		R_TimekeepBak_Min
+	lda		R_Timekeep_Sec
+	sta		R_TimekeepBak_Sec
+TimeDown_BakOver:
+	rts
+
+
+; 计时模式下清空计时
+Timekeep_ClearCount:
+	lda		#0
+	sta		R_Timekeep_Min
+	sta		R_Timekeep_Sec
+	sta		R_TimekeepBak_Min
+	sta		R_TimekeepBak_Sec
 	rts
 
 

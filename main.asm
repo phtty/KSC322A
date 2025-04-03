@@ -74,8 +74,13 @@ Wait_RFC_MeasureOver:
 	smb4	IER										; 上电显示完成，重新开启按键中断
 
 ; 测试部分
-	lda		#%01
-	sta		Alarm_Switch
+	lda		#$99
+	sta		R_Timekeep_Min
+	sed
+	lda		R_Timekeep_Min
+	adc		#1
+	sta		R_Timekeep_Min
+	cld
 
 	bra		Global_Run
 
@@ -123,7 +128,9 @@ Status_SetAlarm:
 	jsr		F_Alarm_GroupSet
 	bra		MainLoop
 Status_TimeKeep:
-	nop												; 计时模式的显示部分
+	jsr		F_Timekeep_Run
+	jsr		F_Timekeep_Display
+	jsr		F_Timekeep_BeepHandler
 	bra		MainLoop
 
 
@@ -185,6 +192,7 @@ V_IRQ:
 	lda		IER
 	and		IFR
 	sta		R_Int_Backup
+	cld
 
 	bbs0	R_Int_Backup,L_DivIrq
 	bbs1	R_Int_Backup,L_Timer0Irq
@@ -194,27 +202,27 @@ V_IRQ:
 	bbs6	R_Int_Backup,L_LcdIrq
 	jmp		L_EndIrq
 
-L_DivIrq:
+L_DivIrq:										; 用于红外收码计时、蜂鸣器时钟源以及RFC 50Hz采样计数
 	rmb0	IFR									; 清中断标志位
 	jmp		I_DivIRQ_Handler
 
-L_Timer0Irq:									; 用于蜂鸣器
+L_Timer0Irq:
 	rmb1	IFR									; 清中断标志位
 	jmp		I_Timer0IRQ_Handler
 
-L_Timer1Irq:									; 用于快加计时
+L_Timer1Irq:
 	rmb2	IFR									; 清中断标志位
 	jmp		I_Timer1IRQ_Handler
 
-L_Timer2Irq:
+L_Timer2Irq:									; 用于LED的PWM调光、32Hz长按计数、21Hz蜂鸣间隔计数以及4Hz快加计数
 	rmb3	IFR									; 清中断标志位
 	jmp		I_Timer2IRQ_Handler
 
-L_PaIrq:
+L_PaIrq:										; 用于按键
 	rmb4	IFR									; 清中断标志位
 	jmp		I_PaIRQ_Handler
 
-L_LcdIrq:
+L_LcdIrq:										; 用于走时和半秒更新
 	rmb6	IFR									; 清中断标志位
 	jmp		I_LcdIRQ_Handler
 
@@ -242,6 +250,7 @@ L_EndIrq:
 .include	TestDisplay.asm
 .include	infrared.asm
 .include	IR_Table.asm
+.include	TimeKeep.asm
 
 
 .BLKB	0FFFFH-$,0FFH							; 从当前地址到FFFF全部填充0xFF

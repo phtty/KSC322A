@@ -237,7 +237,6 @@ L_AlarmTrigger_Exit:
 	rts
 
 L_CloseLoud:									; 结束并关闭响闹
-	rmb6	Clock_Flag
 	rmb1	RFC_Flag							; 取消禁用RFC采样
 	lda		#0
 	sta		Triggered_AlarmGroup
@@ -247,7 +246,7 @@ L_CloseLoud:									; 结束并关闭响闹
 	rmb5	Clock_Flag
 
 	bbs4	Key_Flag,L_LoudingJuge_Exit			; 如果有按键提示音，则不关闭蜂鸣器
-	rmb7	Timer_Switch						; 关闭闹钟相关的计时开关
+	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源计时开关
 	rmb3	PB
 
 	rmb3	Timer_Flag

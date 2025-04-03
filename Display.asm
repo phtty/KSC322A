@@ -441,6 +441,36 @@ L_24hMode_Set:
 
 
 
+
+F_Display_Timekeep:
+	lda		R_Timekeep_Sec
+	and		#$0f
+	ldx		#led_d3
+	jsr		L_Dis_7Bit_DigitDot
+
+	lda		R_Timekeep_Sec
+	and		#$f0
+	jsr		L_LSR_4Bit
+	ldx		#led_d2
+	jsr		L_Dis_7Bit_DigitDot
+
+	lda		R_Timekeep_Min
+	and		#$0f
+	ldx		#led_d1
+	jsr		L_Dis_7Bit_DigitDot
+
+	lda		R_Timekeep_Min
+	and		#$f0
+	jsr		L_LSR_4Bit
+	ldx		#led_d0
+	jsr		L_Dis_7Bit_DigitDot
+
+	jsr		F_DisCol
+	rts
+
+
+
+
 ; ¡¡√Îµ„
 F_DisCol:
 	ldx		#led_COL1
