@@ -1,38 +1,42 @@
 CLK_SET_LOW		MACRO
 	lda		PD
-	and		#$98
+	and		#$80
 	sta		PD
 	ENDM
 
 CLK_SET_HIGH	MACRO
 	lda		PD
-	and		#$d8
+	and		#$80
 	ora		#$40
 	sta		PD
 	ENDM
-		
+
 SDI_SET_LOW		MACRO
+	sei
 	lda		PC
-	and		#$dd
+	and		#$fd
 	sta		PC
+	cli
 	ENDM
 
 SDI_SET_HIGH	MACRO
+	sei
 	lda		PC
-	and		#$df
+	and		#$fd
 	ora		#$02
 	sta		PC
+	cli
 	ENDM
-		
+
 LE_SET_LOW		MACRO
 	lda		PD
-	and		#$58
+	and		#$40
 	sta		PD
 	ENDM
-		
+
 LE_SET_HIGH		MACRO
 	lda		PD
-	and		#$d8
+	and		#$40
 	ora		#$80
 	sta		PD
 	ENDM
@@ -40,13 +44,14 @@ LE_SET_HIGH		MACRO
 
 LED_SET_LOW		MACRO
 	lda		PC
-	and		#$de
+	and		#$fe
+	sta		PC
 	sta		PC
 	ENDM
 
 LED_SET_HIGH	MACRO
 	lda		PC
-	and		#$df
+	and		#$fe
 	ora		#$01
 	sta		PC
 	ENDM
@@ -57,8 +62,8 @@ IR_RISING_EDGE_JUGE	MACRO
 	and		#$10
 	beq		?No_RisingEdge
 	smb0	IR_Flag
-	;lda		#$3c					; 测试用，PA4输出高
-	;sta		PA
+	lda		#$3c					; 测试用，PA4输出高
+	sta		PA
 	bra		?RisingEdge_JugeExit
 ?No_RisingEdge:
 	rmb0	IR_Flag
@@ -74,8 +79,8 @@ IR_FALLING_EDGE_JUGE	MACRO
 	and		#$10
 	bne		?No_FallingEdge
 	smb1	IR_Flag
-	;lda		#$2c					; 测试用，PA4输出低
-	;sta		PA
+	lda		#$2c					; 测试用，PA4输出低
+	sta		PA
 	bra		?FallingEdge_JugeExit
 ?No_FallingEdge:
 	rmb1	IR_Flag

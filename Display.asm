@@ -64,7 +64,7 @@ L_Hour_Tens_NoZero:
 F_Display_Alarm:								; 调用显示函数显示当前闹钟组
 	jsr		L_DisAlarm_Min
 	jsr		L_DisAlarm_Hour
-	
+
 	rts
 
 L_DisAlarm_Min:
@@ -550,6 +550,14 @@ L_LSR_4Bit:
 	ror
 	ror
 	ror
+	rts
+
+L_ASL_4Bit:
+	clc
+	rol
+	rol
+	rol
+	rol
 	rts
 
 

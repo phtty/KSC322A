@@ -69,7 +69,7 @@ Clock_Flag				DS		1
 ;bit0 = 1 12h模式
 ;bit1 = 1 闹钟触发
 ;bit2 = 1 响闹模式
-;bit3 = 1 
+;bit3 = 1 返回初始状态计时开启
 ;bit4 = 1 
 ;bit5 = 1 
 ;bit6 = 1 

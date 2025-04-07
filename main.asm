@@ -38,32 +38,26 @@ L_Clear_Ram_Loop:
 	jsr		F_Init_Sys								; 初始化外设
 
 	cli												; 开总中断
-
 	jsr		L_Send_DRAM
 
 ;上电处理
 	rmb4	IER										; 关闭按键中断避免上电过程被打扰
 	lda		#0
-	sta		Light_Level
-	smb0	PC										; 初始亮度设置为低亮
-	smb0	PC_IO_Backup
+	sta		Light_Level								; 初始亮度设置为低亮
 
  	jsr		F_Test_Display							; 上电显示部分
 
-	jsr		F_RFC_MeasureStart						; 上电温度测量
-Wait_RFC_MeasureOver:
-	jsr		F_RFC_MeasureManage
-	bbs0	RFC_Flag,Wait_RFC_MeasureOver
+;	jsr		F_RFC_MeasureStart						; 上电温度测量
+;Wait_RFC_MeasureOver:
+;	jsr		F_RFC_MeasureManage
+;	bbs0	RFC_Flag,Wait_RFC_MeasureOver
 
 	lda		#$02
 	sta		Beep_Serial
 	smb4	Key_Flag
-	smb3	Timer_Switch
-;Loop_BeepTest:										; 响铃1声
-;	jsr		F_BeepManage
-;	bne		Loop_BeepTest
+	smb3	Timer_Switch							; 上电响铃1声
 
-	lda		#00001B
+	lda		#%00001
 	sta		Sys_Status_Flag
 	lda		#0
 	sta		Sys_Status_Ordinal
@@ -74,36 +68,23 @@ Wait_RFC_MeasureOver:
 	smb4	IER										; 上电显示完成，重新开启按键中断
 
 ; 测试部分
-	lda		#$99
-	sta		R_Timekeep_Min
-	sed
-	lda		R_Timekeep_Min
-	adc		#1
-	sta		R_Timekeep_Min
-	cld
 
 	bra		Global_Run
 
 
 ; 状态机
 MainLoop:
-	lda		PC
-	and		#$20
-	bne		Global_Run
-	;smb4	SYSCLK
-	;sta		HALT									; 休眠
-	;rmb4	SYSCLK
+	jsr		F_PowerSavingMode						; 只有纽扣电池的省电模式
 Global_Run:											; 全局生效的功能处理
 	jsr		F_Flash_Display							; 通过标志位决定是否刷新显示
 	;jsr		F_KeyHandler
 	jsr		IR_Receive_Loop							; 红外接收
 	jsr		F_BeepManage
-	;jsr		F_PowerManage
 	jsr		F_Time_Run								; 走时
 	jsr		F_SymbolRegulate
 	jsr		F_Date_Display							; 日期和星期更新，日期设置模式下由日期设置更新接管
-	jsr		F_RFC_MeasureManage
-	;jsr		F_ReturnToDisTime						; 定时返回时显模式
+	;jsr		F_RFC_MeasureManage
+	jsr		F_ReturnToInitial						; 定时返回时显模式
 
 Status_Juge:
 	bbs0	Sys_Status_Flag,Status_DisTime
@@ -136,37 +117,23 @@ Status_TimeKeep:
 
 
 
-F_ReturnToDisTime:
+F_ReturnToInitial:
+	bbr3	Clock_Flag,NoNeed_Return				; 同时有返回初始状态计时开启和返回加时1S标志才会处理
 	bbs3	Time_Flag,L_Return_Start
+NoNeed_Return:
 	rts
 L_Return_Start:
-	bbr0	Sys_Status_Flag,L_Return_Juge
-	bbs0	Sys_Status_Ordinal,L_Return_Juge
-	nop												; 正倒计时模式下，则不返回
-	lda		#10
-	sta		Return_MaxTime
-L_Return_Juge:
 	rmb3	Time_Flag
 	lda		Return_Counter
 	cmp		Return_MaxTime							; 当前模式的返回时间
-	bcs		L_Return_Stop
+	bcs		L_ReturnToInitial
 	inc		Return_Counter
-	bra		L_Return_Juge_Exit
-L_Return_Stop:
+	rts
+L_ReturnToInitial:
 	lda		#0
 	sta		Return_Counter
-	bbr0	Sys_Status_Flag,No_ClockDis_Return		; Sys Flag第一位为0则不是时显
-	bra		L_Return_Juge_Exit
-
-No_ClockDis_Return:
-	lda		#0
-	sta		Sys_Status_Ordinal						; 非时显若计时结束则返回时显
-
-Return_Over:
-	lda		#0001B									; 回到时显模式
-	sta		Sys_Status_Flag
-L_Return_Juge_Exit:
-	rts
+	rmb3	Clock_Flag
+	jmp		Return_CD_Mode
 
 
 
@@ -236,6 +203,7 @@ L_EndIrq:
 
 .include	IRQ.asm
 .include	ScanKey.asm
+.include	KeyFunction.asm
 .include	Time.asm
 .include	Calendar.asm
 .include	Beep.asm

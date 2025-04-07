@@ -17,7 +17,7 @@ L_50Hz_Juge:
 	lda		Counter_50Hz
 	cmp		#1
 	beq		RFC_Start
-	cmp		#163
+	cmp		#11
 	bcs		RFC_Sample
 	jmp		L_EndIrq
 RFC_Start:
@@ -108,8 +108,8 @@ I_LcdIRQ_Handler:
 	lda		#0
 	sta		Counter_2Hz
 	smb1	Timer_Flag						; 2Hz标志
-
 	smb1	Symbol_Flag
+	smb6	Time_Flag
 
 L_1Hz_Juge:
 	inc		Counter_1Hz
@@ -124,6 +124,5 @@ L_1Hz_Juge:
 	lda		#$4f
 	ora		Time_Flag
 	sta		Time_Flag						; 走时加时、响铃加时、返回加时，RFC采样加时，亮屏时间加时，清除响闹阻塞状态
-
 LcdIRQ_Exit:
 	jmp		L_EndIrq

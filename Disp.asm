@@ -196,34 +196,21 @@ L_Flash_Start:
 
 
 
-; 发送显存到5020
 L_Send_DRAM:
 	LE_SET_LOW							; 发送数据时需要LE拉低锁存5020当前数据
-	ldx		#12
+	lda		#12
+	sta		P_Temp						; 显存偏移量，做外层循环的计数
 
-?Loop_Start:							; 拷贝显存准备进行显示
-	dex
-	php
-	lda		LED_RamAddr,x				; 12byte的显存全部拷贝
-	sta		LED_BakRamAddr,x
-	plp
-	bne		?Loop_Start
+L_DRAM_DecLoop:
+	dec		P_Temp
+	ldx		P_Temp
+	lda		LED_RamAddr,x
+	sta		P_Temp+1					; P_Temp+1为当前发送显存的拷贝
 
-	lda		#12*8
-	sta		P_Temp
-L_Sending_Loop:							; 5020是MSB，使用左移先发送高位
-	ldx		#0
+	ldx		#8
+L_Sending_8BitLoop:						; 5020是MSB，使用左移先发送高位
 	clc
-	php
-?Loop_ROL:
-	plp
-	rol		LED_BakRamAddr,x
-	php									; 保存位移出来的C位
-	inx
-	cpx		#12
-	bcc		?Loop_ROL					; 12byte的显存全部左移1位
-
-	plp
+	rol		P_Temp+1
 	bcc		L_Send_0
 	SDI_SET_HIGH						; 判断位移出来的C，1则输出高
 	bra		L_CLK_Change
@@ -235,8 +222,11 @@ L_CLK_Change:
 	nop
 	nop
 	CLK_SET_HIGH
-	dec		P_Temp
-	bne		L_Sending_Loop
+	dex
+	bne		L_Sending_8BitLoop			; 内层8bit发送循环
+
+	lda		P_Temp
+	bne		L_DRAM_DecLoop				; 外层12byte循环
 
 	LE_SET_HIGH							; 5020取消锁存，接收新数据
 	nop									; 延时6个指令周期确保IO口翻转完成
