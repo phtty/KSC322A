@@ -1,7 +1,9 @@
 F_RFC_MeasureManage:
 	bbs1	RFC_Flag,L_RFC_Exit					; 存在响闹和按键音的时候，TIM0、1被占用，不进行测量
 	bbs4	Key_Flag,L_RFC_Exit
-	bbs0	Key_Flag,L_RFC_Exit					; 按键按下时，不进行测量
+	lda		Sys_Status_Flag						; 计时模式不进行测量
+	cmp		#%10000
+	beq		L_RFC_Exit
 
 	bbr4	RFC_Flag,RFC_NoComplete
 	rmb4	RFC_Flag

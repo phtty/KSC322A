@@ -143,20 +143,20 @@ SwitchState_TimeDownMode:
 
 
 ; 切换三档灯光亮度
-; 0低亮，1半亮，2高亮
+; 0低亮，1半亮，2高亮，3自动亮度
 LightLevel_Change:
+	lda		#0
+	sta		Counter_LL
+
 	inc		Light_Level
 	lda		Light_Level
-	cmp		#3
-	bcs		LightLevel_Auto
-	REFLASH_DISPLAY								; 按键操作结束刷新显示
-	rts
-LightLevel_Auto:
+	cmp		#4
+	bcc		LightLevel_CHG_Exit
 	lda		#0
-	sta		Light_Level
-	smb3	Backlight_Flag
-	nop											; 切换至自动亮度
-	REFLASH_DISPLAY								; 按键操作结束刷新显示
+	sta		Light_Level							; 亮度等级溢出
+LightLevel_CHG_Exit:
+	smb3	Backlight_Flag						; 显示亮度等级
+	smb0	Timer_Flag							; 立刻进行一次显示
 	rts
 
 
@@ -189,7 +189,7 @@ DM_SW_TimeMode:
 ; 切换温度单位
 TemperMode_Change:
 	lda		RFC_Flag							; 取反标志位，切换华氏度和摄氏度
-	eor		#00010000B
+	eor		#%01000
 	sta		RFC_Flag
 	jsr		F_Display_Temper					; 更新温度单位和温度
 

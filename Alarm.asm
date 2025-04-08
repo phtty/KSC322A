@@ -1,12 +1,15 @@
 F_Alarm_GroupDis:
+	bbs3	Backlight_Flag,F_Alarm_GroupNoDis
 	jsr		L_AlarmDot_Blink					; 闪烁AL点指示当前闹钟组
-	jsr		F_Display_Alarm
+	jmp		F_Display_Alarm
+F_Alarm_GroupNoDis:
 	rts
 
 
 
 
 F_Alarm_GroupSet:
+	bbs3	Backlight_Flag,Alarm_GroupSet_NoDis
 	jsr		L_AlarmDot_Blink
 
 	lda		Sys_Status_Ordinal
@@ -17,6 +20,7 @@ F_Alarm_GroupSet:
 	pha
 	lda		AlarmGroupHandle_Table,x
 	pha
+Alarm_GroupSet_NoDis:
 	rts											; 根据当前子模式，跳转到对应的显示函数
 
 ; 根据当前闹钟组进对应设置模式
@@ -371,10 +375,10 @@ Alarm2_SecMatch:
 ; 确定闹钟触发后的处理，打断当前的响闹
 L_Alarm_Match_Handle:
 	jsr		L_CloseLoud
-	bbs4	Time_Flag,Alarm_Blocked
+	bbs5	Time_Flag,Alarm_Blocked
 	smb1	Clock_Flag							; 同时满足小时和分钟的匹配，设置闹钟触发
 Alarm_Blocked:
-	smb4	Time_Flag							; 闹钟触发后，阻塞下一次1S内的闹钟触发
+	smb5	Time_Flag							; 闹钟触发后，阻塞下一次1S内的闹钟触发
 	rts
 
 

@@ -28,8 +28,8 @@ IR_Receive_Phase_0:
 	beq		IR_Turn2Phase1
 	rts
 IR_Turn2Phase1:
-	lda		#$2c							; 测试用，PA4输出
-	sta		PA
+	;lda		#$2c							; 测试用，PA4输出
+	;sta		PA
 	lda		#1
 	sta		IR_ReceivePhase					; 收码进入阶段1
 	smb3	IR_Flag							; IR开始计数
@@ -279,6 +279,7 @@ TimeUp_DepressFunc:
 	rmb1	IR_DepressJuge
 	bbs0	Sys_Status_Ordinal,?TimeUp_NoFunc_TimeUp
 	bbs0	Timekeep_Flag,?TimeUp_NoFunc_TimeUp
+	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
 	jmp		SwitchState_TimeUpMode			; 倒计时模式未启用计时状态下，切换到正计时模式
 ?TimeUp_NoFunc_TimeUp:
 	rts
@@ -287,6 +288,7 @@ TimeDown_DepressFunc:
 	rmb2	IR_DepressJuge
 	bbs0	Sys_Status_Ordinal,?TimeDown_NoFunc_TimeDown
 	bbs0	Timekeep_Flag,?TimeDown_NoFunc_TimeDown
+	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
 	jmp		SwitchState_TimeDownMode		; 正计时模式未启用计时状态下，切换到倒计时模式
 ?TimeDown_NoFunc_TimeDown:
 	rts
@@ -324,8 +326,7 @@ IR_Decode_Start:
 	eor		ID_Code							; 校验数据码，若校验失败则不解码并清空缓冲区
 	cmp		#$ff
 	beq		IR_Code_CheckOK
-	jsr		Receive_Abort
-	rts
+	jmp		Receive_Abort
 
 IR_Code_CheckOK:
 	ldx		#0
@@ -343,6 +344,12 @@ IR_KeyHandle:
 	jsr		L_ShutDown_Loud					; 若此时正在响闹，则关闭闹钟，但不执行按键功能
 	lda		#0
 	sta		Return_Counter					; 清空返回初始状态计数
+
+	cpx		#0
+	beq		No_KeyOnOff
+	bbs1	Backlight_Flag,No_KeyOnOff
+	rts										; 非OnOff键在熄屏模式下没有效果
+No_KeyOnOff:
 
 	txa
 	clc
@@ -402,10 +409,10 @@ L_ShutDown_Loud:							; 按键关闭闹钟
 
 L_IR_Func_OnOff:
 	jsr		L_KeyBeep_ON
-	lda		#%0010
+	lda		Backlight_Flag
+	eor		#%0010
 	sta		Backlight_Flag					; 翻转PWM调光开关，并关闭所有LED
-	smb2	Backlight_Flag
-	;LED_SET_HIGH
+	LED_SET_HIGH
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
@@ -568,6 +575,7 @@ L_IR_Func_TimerUp:
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 Func_TimeUp_Effect:
 	bbs4	Sys_Status_Flag,TimeKeep_UpMode
+	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
 	jsr		SwitchState_TimeUpMode			; 切换到正计时模式
 	jmp		IR_ShutDown_KeyScan				; 按键功能只执行1次
 TimeKeep_UpMode:
@@ -576,6 +584,7 @@ TimeKeep_UpMode:
 	rts
 ?LongPress_Trigger:
 	rmb1	IR_DepressJuge
+	rmb1	RFC_Flag						; 重新启用RFC采样
 	jsr		Return_CD_Mode					; 返回时显
 	jmp		IR_ShutDown_KeyScan				; 长按功能只执行1次
 
@@ -589,11 +598,12 @@ L_IR_Func_TimerDown:
 
 	lda		Sys_Status_Flag
 	and		#%10011
-	bne		Func_TimeDown_Effect
+	bne		Func_TimeDown_Effect	
 	jsr		Return_CD_Mode					; 设置模式会返回时显
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 Func_TimeDown_Effect:
 	bbs4	Sys_Status_Flag,TimeKeep_DownMode
+	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
 	jsr		SwitchState_TimeDownMode		; 切换到倒计时模式
 	jmp		IR_ShutDown_KeyScan				; 按键功能只执行1次
 TimeKeep_DownMode:
@@ -602,6 +612,7 @@ TimeKeep_DownMode:
 	rts
 ?LongPress_Trigger:
 	rmb2	IR_DepressJuge
+	rmb1	RFC_Flag						; 重新启用RFC采样
 	jsr		Return_CD_Mode					; 返回时显
 	jmp		IR_ShutDown_KeyScan				; 长按功能只执行1次
 

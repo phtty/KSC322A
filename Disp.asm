@@ -186,10 +186,10 @@ L_2Bit_Digit8:
 
 
 F_Flash_Display:
-	bbs6	Time_Flag,L_Flash_Start
+	bbs4	Time_Flag,L_Flash_Start
 	rts
 L_Flash_Start:
-	rmb6	Time_Flag
+	rmb4	Time_Flag
 	jsr		L_Send_DRAM
 	rts
 
@@ -284,8 +284,8 @@ Table_Word_7bit:
 	.byte	$5c	; o 2
 	.byte	$37	; N 3
 	.byte	$77	; A 4
-	.byte	$5e	; d 5
-	.byte	$73	; p 6
+	.byte	$38	; L 5
+	.byte	$3e	; U 6
 	.byte	$76	; H 7
 	.byte	$50	; r 8
 	.byte	$40	; - 9
@@ -299,4 +299,3 @@ Table_Week_7bit:
 	.byte	$20	; FRI
 	.byte	$40	; SAT
 	.byte	$00	; undisplay
-

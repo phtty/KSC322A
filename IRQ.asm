@@ -43,6 +43,10 @@ I_Timer1IRQ_Handler:
 I_Timer2IRQ_Handler:
 	bbr1	Backlight_Flag,L_32Hz_Juge		; PWM调光开关
 	lda		Light_Level
+	cmp		#3
+	bcc		No_AutoLL
+	lda		Auto_LightLevel					; 3为自动亮度
+No_AutoLL:
 	cmp		Counter_256Hz
 	bcc		PWM_Set_High
 	LED_SET_LOW								; PWM调光口输出低
@@ -109,7 +113,7 @@ I_LcdIRQ_Handler:
 	sta		Counter_2Hz
 	smb1	Timer_Flag						; 2Hz标志
 	smb1	Symbol_Flag
-	smb6	Time_Flag
+	smb4	Time_Flag
 
 L_1Hz_Juge:
 	inc		Counter_1Hz
@@ -120,9 +124,11 @@ L_1Hz_Juge:
 	sta		Counter_1Hz
 	smb0	Timer_Flag
 	smb0	Symbol_Flag
+	smb4	Backlight_Flag
+	rmb5	Time_Flag						; 清除响闹阻塞状态
 
-	lda		#$4f
+	lda		#$0f
 	ora		Time_Flag
-	sta		Time_Flag						; 走时加时、响铃加时、返回加时，RFC采样加时，亮屏时间加时，清除响闹阻塞状态
+	sta		Time_Flag						; 走时加时、响铃加时、返回加时，RFC采样加时
 LcdIRQ_Exit:
 	jmp		L_EndIrq

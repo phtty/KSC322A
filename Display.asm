@@ -279,11 +279,8 @@ F_Display_Temper:
 
 	bbr3	RFC_Flag,Dis_CDegree
 	jmp		Display_FahrenheitDegree
+
 Dis_CDegree:
-	jmp		Display_CelsiusDegree
-
-
-Display_CelsiusDegree:
 	lda		R_Temperature
 	jsr		L_A_DecToHex
 	sta		P_Temp+7
@@ -437,6 +434,34 @@ L_24hMode_Set:
 	ldx		#led_d0
 	lda		#2
 	jsr		L_Dis_7Bit_DigitDot
+	rts
+
+
+
+
+L_Dis_Lxx:
+	ldx		#led_d1
+	lda		#5
+	jsr		L_Dis_7Bit_WordDot
+
+	lda		Light_Level
+	clc
+	adc		#1
+	cmp		#4
+	bcs		Dis_Auto_LightLevel
+	ldx		#led_d3
+	jsr		L_Dis_7Bit_DigitDot					; 显示当前亮度等级
+	ldx		#led_d2
+	lda		#0
+	jsr		L_Dis_7Bit_DigitDot
+	rts
+Dis_Auto_LightLevel:
+	ldx		#led_d3
+	lda		#6
+	jsr		L_Dis_7Bit_WordDot					; 显示自动亮度AU
+	ldx		#led_d2
+	lda		#4
+	jsr		L_Dis_7Bit_WordDot
 	rts
 
 

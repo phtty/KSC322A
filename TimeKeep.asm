@@ -44,9 +44,8 @@ TimekeepDown_Mode:
 TimekeepDown_Complete:
 	cld
 	rmb0	Timekeep_Flag
-	smb1	Timekeep_Flag						; 出现溢出置位倒计时完成标志并复位计时开启
+	smb1	Timekeep_Flag						; 出现溢出则置位倒计时完成标志并复位计时开启
 
-	jsr		F_RFC_Abort							; 避免响闹时电压不稳终止RFC采样
 	smb1	Time_Flag
 	smb3	Timer_Switch						; 开启21Hz蜂鸣间隔定时
 	bra		TimeDown_Reflash_Dis
@@ -92,8 +91,6 @@ Timekeep_BeepProcess:
 	rts
 
 CloseBeep:										; 结束并关闭响闹
-	rmb1	RFC_Flag							; 取消禁用RFC采样
-
 	rmb1	Timekeep_Flag						; 关闭倒计时完成标志
 
 	bbs4	Key_Flag,?BeepJuge_Exit				; 如果有按键提示音，则不关闭蜂鸣器
@@ -109,8 +106,10 @@ CloseBeep:										; 结束并关闭响闹
 
 
 F_Timekeep_Display:
+	bbs3	Backlight_Flag,Timekeep_NoDisplay
 	bbs1	Timekeep_Flag,Timekeep_Over
-	bbs6	Time_Flag,Timekeep_FlashDis
+	bbs4	Time_Flag,Timekeep_FlashDis
+Timekeep_NoDisplay:
 	rts
 Timekeep_FlashDis:
 	jmp		F_Display_Timekeep

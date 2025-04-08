@@ -54,11 +54,11 @@ F_Beep_Init		MACRO
 F_Port_Init		MACRO
 	lda		#$3c								; PA2~5设置为上拉输入，并且设置中断唤醒
 	sta		PA_WAKE
-	lda		#$2c
+	lda		#$3c
 	sta		PA_DIR
-	lda		#$2c
+	lda		#$3c
 	sta		PA
-	;smb4	IER									; 打开PA口外部中断
+	smb4	IER									; 打开PA口外部中断
 
 	lda		#$20
 	sta		PC_DIR								; PC5配置为三态输入，其他输出0

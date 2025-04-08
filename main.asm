@@ -47,10 +47,10 @@ L_Clear_Ram_Loop:
 
  	jsr		F_Test_Display							; 上电显示部分
 
-;	jsr		F_RFC_MeasureStart						; 上电温度测量
-;Wait_RFC_MeasureOver:
-;	jsr		F_RFC_MeasureManage
-;	bbs0	RFC_Flag,Wait_RFC_MeasureOver
+	jsr		F_RFC_MeasureStart						; 上电温度测量
+Wait_RFC_MeasureOver:
+	jsr		F_RFC_MeasureManage
+	bbs0	RFC_Flag,Wait_RFC_MeasureOver
 
 	lda		#$02
 	sta		Beep_Serial
@@ -68,7 +68,6 @@ L_Clear_Ram_Loop:
 	smb4	IER										; 上电显示完成，重新开启按键中断
 
 ; 测试部分
-
 	bra		Global_Run
 
 
@@ -77,13 +76,15 @@ MainLoop:
 	jsr		F_PowerSavingMode						; 只有纽扣电池的省电模式
 Global_Run:											; 全局生效的功能处理
 	jsr		F_Flash_Display							; 通过标志位决定是否刷新显示
-	;jsr		F_KeyHandler
+	jsr		F_KeyHandler
 	jsr		IR_Receive_Loop							; 红外接收
 	jsr		F_BeepManage
 	jsr		F_Time_Run								; 走时
 	jsr		F_SymbolRegulate
 	jsr		F_Date_Display							; 日期和星期更新，日期设置模式下由日期设置更新接管
-	;jsr		F_RFC_MeasureManage
+	jsr		F_RFC_MeasureManage
+	jsr		F_AutoLL_Get
+	jsr		F_Display_LightLevel
 	jsr		F_ReturnToInitial						; 定时返回时显模式
 
 Status_Juge:

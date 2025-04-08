@@ -32,7 +32,9 @@ L_Time_SecRun_Exit:
 
 ; 时间显示
 F_Time_Display:
+	bbs3	Backlight_Flag,F_Time_NoDisplay			; 若有亮度显示，则不显示时间
 	bbs1	Timer_Flag,L_TimeDot_Out
+F_Time_NoDisplay:
 	rts
 L_TimeDot_Out:
 	rmb1	Timer_Flag								; 时间显示半S更新一次
@@ -45,6 +47,9 @@ L_TimeDot_Out:
 
 ; 时钟设置模式，根据子模式序号进入对应的设置项显示
 F_Clock_Set:
+	bbr3	Backlight_Flag,Clock_SetDis_Start
+	rts
+Clock_SetDis_Start:
 	lda		Sys_Status_Ordinal
 	bne		No_TMSwitch_Display
 	jmp		F_TimeMode_Switch						; 12/24h模式切换

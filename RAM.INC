@@ -5,7 +5,6 @@
 RamStarAddr		EQU		1800H											;RAM的开始地址
 
 LED_RamAddr		EQU		RamStarAddr+LED_Addr-Page0RamStarAddr			;LED RAM的地址
-LED_BakRamAddr	EQU		RamStarAddr+LED_Addr_BK-Page0RamStarAddr		;LED_BK RAM的地址
 IR_RamAddr		EQU		RamStarAddr+IR_Code_Addr-Page0RamStarAddr		;IR_Code的地址
 Time_Addr		EQU		RamStarAddr+Time_Str_Addr-Page0RamStarAddr		;事件相关数据的地址
 Alarm_MinAddr	EQU		RamStarAddr+Alarm_Min_Addr-Page0RamStarAddr		;闹钟组分钟数据地址
@@ -22,9 +21,6 @@ TimekeepAddr	EQU		RamStarAddr+Timekeep_Addr-Page0RamStarAddr	;闹钟组小时数据地址
 Page0RamStarAddr		EQU		$
 LED_Addr				EQU		$
 LED_Ram					DS		12
-
-LED_Addr_BK				EQU		$
-LED_Ram_BK				DS		12
 
 ; IR解码缓存
 IR_Code_Addr			EQU		$
@@ -44,11 +40,10 @@ Counter_50Hz			DS		1
 Counter_256Hz			DS		1
 Counter_4096Hz			DS		1
 
-Counter_DP				DS		1
+Counter_LL				DS		1
 Count_RFC				DS		1
 
 QuickAdd_Counter		DS		1
-Backlight_Counter		DS		1
 Return_Counter			DS		1
 Return_MaxTime			DS		1
 AlarmLoud_Counter		DS		1
@@ -99,9 +94,9 @@ Time_Flag				DS		1
 ;bit1 = 1 响铃加时1S标志
 ;bit2 = 1 RFC采样加时1S标志
 ;bit3 = 1 返回初始状态加时1S标志
-;bit4 = 1 清除响闹阻塞标志
-;bit5 = 1 亮屏时间加时1S标志
-;bit6 = 1 刷新显示标志
+;bit4 = 1 刷新显示标志
+;bit5 = 1 响闹阻塞标志
+;bit6 = 1 
 
 ; 符号操作
 Symbol_Flag				DS		1
@@ -188,11 +183,17 @@ Backlight_Flag			DS		1
 ;bit0 = 1 DC5V接入时唤醒
 ;bit1 = 1 PWM调光开关
 ;bit2 = 1 手动进入熄屏模式
-;bit3 = 1 自动亮度
+;bit3 = 1 显示亮度等级
+;bit4 = 1 亮度检测1S间隔标志
 
 Light_Level				DS		1	; 亮度等级
 ; 0: 低亮
 ; 1: 半亮
+; 2: 高亮
+; 3：自动亮度
+
+Auto_LightLevel			DS		1	; 当前自动亮度等级
+; 0: 低亮
 ; 2: 高亮
 
 Alarm_Group				DS		1	; 闹钟组
