@@ -226,11 +226,14 @@ L_Universal_TriggerHandle:
 	jsr		L_KeyBeep_ON
 	rts
 WakeUp_Event:
+	bbs4	Sys_Status_Flag,?Timekeep_Mode
 	lda		#%00001
 	sta		Sys_Status_Flag
 	lda		#0
 	sta		Sys_Status_Ordinal					; 按键唤醒熄屏后会回到时间显示模式
+?Timekeep_Mode:
 	REFLASH_DISPLAY
+	smb1	Backlight_Flag
 	pla
 	pla
 	jmp		L_KeyExit							; 熄屏唤醒的那次按键，没有按键功能
@@ -239,11 +242,13 @@ WakeUp_Event:
 
 
 L_KeyBeep_ON:
-	lda		#10B								; 设置按键提示音的响铃序列
+	lda		#%10								; 设置按键提示音的响铃序列
 	sta		Beep_Serial
 	smb4	Key_Flag							; 置位按键提示音标志
 	jsr		F_RFC_Abort							; 避免电压不稳定导致RFC采样误差
 	smb3	Timer_Switch
+	lda		#0
+	sta		Counter_21Hz
 	rts
 
 ;L_KeyBeep_OFF:

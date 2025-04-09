@@ -309,7 +309,7 @@ TimeHour_AddOverflow:
 	sta		R_Time_Hour
 TimeHour_Add_Exit:
 	;jsr		L_LightLevel_WithKeyU
-	;jsr		F_Display_Time
+	jsr		F_Display_Time
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -325,7 +325,7 @@ TimeHour_SubOverflow:
 	sta		R_Time_Hour
 TimeHour_Sub_Exit:
 	;jsr		L_LightLevel_WithKeyD
-	;jsr		F_Display_Time
+	jsr		F_Display_Time
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -347,7 +347,7 @@ TimeMin_AddOverflow:
 	lda		#0
 	sta		R_Time_Min
 TimeMin_Add_Exit:
-	;jsr		F_Display_Time
+	jsr		F_Display_Time
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -365,7 +365,7 @@ TimeMin_SubOverflow:
 	lda		#59
 	sta		R_Time_Min
 TimeMin_Sub_Exit:
-	;jsr		F_Display_Time
+	jsr		F_Display_Time
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -386,7 +386,8 @@ DateYear_AddOverflow:
 DateYear_Add_Exit:
 	jsr		L_DayOverflow_Juge					; 若当前日期超过当前月份允许的最大值，则日期变为当前允许最大日
 	jsr		F_Is_Leap_Year
-	;jsr		L_DisDate_Year
+	jsr		L_DisDate_Year
+	jsr		F_Display_Week
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -403,7 +404,8 @@ DateYear_SubOverflow:
 DateYear_Sub_Exit:
 	jsr		L_DayOverflow_Juge					; 若当前日期超过当前月份允许的最大值，则日期变为当前允许最大日
 	jsr		F_Is_Leap_Year
-	;jsr		L_DisDate_Year
+	jsr		L_DisDate_Year
+	jsr		F_Display_Week
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -423,7 +425,8 @@ DateMonth_AddOverflow:
 	lda		#1
 	sta		R_Date_Month
 DateMonth_Add_Exit:
-	;jsr		F_Date_Display
+	jsr		F_Display_Date
+	jsr		F_Display_Week
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -440,7 +443,8 @@ DateMonth_SubOverflow:
 	lda		#12
 	sta		R_Date_Month
 DateMonth_Sub_Exit:
-	;jsr		F_Date_Display
+	jsr		F_Display_Date
+	jsr		F_Display_Week
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -452,7 +456,8 @@ DateMonth_Sub_Exit:
 L_DateDay_Add:
 	inc		R_Date_Day
 	jsr		L_DayOverflow_To_1					; 若当前日期超过当前月份允许的最大值，则日期变为1日
-	;jsr		F_Date_Display
+	jsr		F_Display_Date
+	jsr		F_Display_Week
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -477,7 +482,8 @@ Common_Year_Get:
 	lda		L_Table_Month_Common,x
 	sta		R_Date_Day
 DateDay_Sub_Exit:
-	;jsr		F_Date_Display
+	jsr		F_Display_Date
+	jsr		F_Display_Week
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -624,6 +630,19 @@ AlarmWorkDay_Sub_Exit:
 ; 倒计时模式设置计时时间
 Timekeep_NumSet:
 	lda		Timekeep_NumberSet
+	cmp		#2
+	bne		?Juge_Over							; 判断是否是设置秒十位
+	lda		P_Temp
+	cmp		#6
+	bcc		?Juge_Over							; 判断秒十位是否超过5
+	lda		#4									; 设置错误提示音的响铃序列
+	sta		Beep_Serial
+	rmb4	Key_Flag							; 不合法的数值不再使用按键提示音
+	smb6	Key_Flag							; 使用错误提示音
+	rts
+?Juge_Over:
+	lda		Timekeep_NumberSet
+	clc
 	ror											; 通过Timekeep_NumberSet的第一位判断是设置十位还是个位
 	bcs		SetSingle_Number
 	tax											; 设置分/秒的十位数
@@ -650,6 +669,7 @@ NumSet_Inc:
 	lda		#0
 	sta		Timekeep_NumberSet					; 溢出后回到0
 NumSet_Exit:
+	REFLASH_DISPLAY								; 修改完成后刷新显示
 	rts
 
 

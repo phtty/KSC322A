@@ -349,7 +349,7 @@ F_SymbolRegulate:								; 显示常亮点
 
 ; 响闹时闪ALM点
 L_ALMDot_Blink:
-	bbr2	Clock_Flag,L_SymbolDis_Exit			; 如果非贪睡状态，则不进此子程序
+	bbr2	Clock_Flag,L_SymbolDis_Exit			; 如果非响闹状态，则不进此子程序
 	bbs0	Symbol_Flag,L_SymbolDis
 L_SymbolDis_Exit:
 	rts
@@ -361,9 +361,11 @@ L_ALM_Dot_Dis:
 	bbs1	Triggered_AlarmGroup,Group2_Bright
 Group1_Bright:
 	jsr		F_DisAL1
+	REFLASH_DISPLAY
 	rts
 Group2_Bright:
 	jsr		F_DisAL2
+	REFLASH_DISPLAY
 	rts
 	
 L_ALM_Dot_Clr:
@@ -372,9 +374,11 @@ L_ALM_Dot_Clr:
 	bbs1	Triggered_AlarmGroup,Group2_Extinguish
 Group1_Extinguish:
 	jsr		F_ClrAL1
+	REFLASH_DISPLAY
 	rts
 Group2_Extinguish:
 	jsr		F_ClrAL2
+	REFLASH_DISPLAY
 	rts
 
 

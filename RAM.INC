@@ -120,16 +120,15 @@ Key_Flag				DS		1
 ;bit3 = 1 屏幕唤醒事件标志位
 ;bit4 = 1 按键提示音标志位
 ;bit5 = 1 长按扫键4Hz标志
-;bit6 = 1 
+;bit6 = 1 错误提示音标志位
 ;bit7 = 1 
 
 ; 长短按功能不同的按键
 SpecialKey_Flag			DS		1
-;bit0 = 1 Alarm键待处理				|特殊按键
-;bit1 = 1 SNZ/Backlight键待处理		|特殊按键
-;bit2 = 1 Mode键待处理				|特殊按键
-;bit3 = 1 Up键待处理				|特殊按键
-;bit4 = 1 Down键待处理				|特殊按键
+;bit0 = 1 Set键待处理				|特殊按键
+;bit1 = 1 Up键待处理				|特殊按键
+;bit2 = 1 Down键待处理				|特殊按键
+;bit3 = 1 Func键待处理				|特殊按键
 
 RFC_Flag				DS		1
 ;bit0 = 1 采样启用标志位

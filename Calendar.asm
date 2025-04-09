@@ -106,7 +106,7 @@ F_Date_Display:
 	bbs1	Calendar_Flag,L_DateFlash_Start
 	rts
 L_DateFlash_Start:
-	rmb1	Calendar_Flag							; 产生日期显示更新
+	rmb1	Calendar_Flag							; 复位日期显示更新
 	jsr		F_Display_Date							; 更新月日和星期
 	jsr		F_Display_Week
 	REFLASH_DISPLAY

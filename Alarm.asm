@@ -209,7 +209,10 @@ F_Alarm_Handler:
 	jsr		L_Alarm_Process
 	rts
 L_No_Alarm_Process:
-	bbs4	Key_Flag,L_LoudingNoClose			; 如果有按键提示音，则不关闭蜂鸣器
+	lda		Beep_Serial
+	bne		L_LoudingNoClose					; 如果有按键或错误提示音，则不关闭蜂鸣器
+	bbs4	Key_Flag,L_LoudingNoClose
+	bbs6	Key_Flag,L_LoudingNoClose
 	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源计时开关
 	rmb3	PB
 
@@ -235,6 +238,8 @@ L_AlarmTrigger:
 	jsr		F_RFC_Abort							; 避免响闹时电压不稳终止RFC采样
 	smb1	Time_Flag
 	smb3	Timer_Switch						; 开启21Hz蜂鸣间隔定时
+	lda		#0
+	sta		Counter_21Hz
 	smb2	Clock_Flag							; 开启响闹模式
 	rmb1	Clock_Flag							; 关闭闹钟触发标志，避免重复进闹钟触发
 L_AlarmTrigger_Exit:
@@ -377,6 +382,7 @@ L_Alarm_Match_Handle:
 	jsr		L_CloseLoud
 	bbs5	Time_Flag,Alarm_Blocked
 	smb1	Clock_Flag							; 同时满足小时和分钟的匹配，设置闹钟触发
+	jsr		WakeUp_Event						; 闹钟触发若此时关屏则会唤醒
 Alarm_Blocked:
 	smb5	Time_Flag							; 闹钟触发后，阻塞下一次1S内的闹钟触发
 	rts

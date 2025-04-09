@@ -19,9 +19,35 @@ PS_Mode_Loop:
 	rts
 
 Enter_LowPower:
+	lda		#$40
+	sta		IER
+	rmb1	Backlight_Flag
+	LED_SET_HIGH
+
+	rmb4	Key_Flag
+	rmb6	Key_Flag
+	rmb1	RFC_Flag
+	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源
+	rmb3	Timer_Switch						; 关闭21Hz计时
+	lda		#0
+	sta		Counter_21Hz
+	lda		#00
+	sta		Beep_Serial
 	rts
 
 Exit_LowPower:
+	lda		#$59
+	sta		IER
+	rmb4	IFR
+
+	lda		#%00001
+	sta		Sys_Status_Flag
+	lda		#0
+	sta		Sys_Status_Ordinal
+	REFLASH_DISPLAY
+
+	smb1	Backlight_Flag
+	rmb3	Backlight_Flag							; 恢复显示后
 	rts
 
 

@@ -20,8 +20,12 @@ L_NoBeep_Serial_Mode:
 	rmb3	PB_TYPE								; PB3选择NMOS输出1避免漏电
 	smb3	PB
 
-	bbr4	Key_Flag,No_KeyBeep_Over			; 如果是按键音则需要在响铃结束后关闭21Hz计时
+	lda		Beep_Serial
+	bne		No_KeyBeep_Over	
+	bbs4	Key_Flag,No_KeyBeep_Over
+	bbs6	Key_Flag,No_KeyBeep_Over			; 存在错误音或按键音，则需要在响铃结束后关闭21Hz计时
 	rmb4	Key_Flag
+	rmb6	Key_Flag
 	rmb1	RFC_Flag							; 按键音的响铃完毕重新取消禁用RFC采样
 	rmb3	Timer_Switch						; 关闭21Hz计时
 No_KeyBeep_Over:

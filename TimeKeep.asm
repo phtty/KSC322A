@@ -48,6 +48,8 @@ TimekeepDown_Complete:
 
 	smb1	Time_Flag
 	smb3	Timer_Switch						; 开启21Hz蜂鸣间隔定时
+	lda		#0
+	sta		Counter_21Hz
 	bra		TimeDown_Reflash_Dis
 
 TimeDown_NoOverflow:
@@ -65,7 +67,10 @@ F_Timekeep_BeepHandler:
 	bbr1	Timekeep_Flag,No_Timekeep_Process	; 有倒计时完成标志位再进处理
 	jmp		Timekeep_BeepProcess
 No_Timekeep_Process:
-	bbs4	Key_Flag,BeepingNoClose				; 如果有按键提示音，则不关闭蜂鸣器
+	lda		Beep_Serial
+	bne		BeepingNoClose						; 如果有按键或错误提示音，则不关闭蜂鸣器
+	bbs4	Key_Flag,BeepingNoClose
+	bbs6	Key_Flag,BeepingNoClose
 	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源计时开关
 	rmb3	PB
 
@@ -92,6 +97,12 @@ Timekeep_BeepProcess:
 
 CloseBeep:										; 结束并关闭响闹
 	rmb1	Timekeep_Flag						; 关闭倒计时完成标志
+
+	lda		R_TimekeepBak_Min
+	sta		R_Timekeep_Min
+	lda		R_TimekeepBak_Sec
+	sta		R_Timekeep_Sec
+	REFLASH_DISPLAY
 
 	bbs4	Key_Flag,?BeepJuge_Exit				; 如果有按键提示音，则不关闭蜂鸣器
 	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源计时开关

@@ -28,12 +28,13 @@ F_Init_SystemRam	MACRO						; 系统内存初始化
 	;lda		#00
 	;sta		R_Date_Week
 
-	smb1	Backlight_Flag						; 上电亮屏
+	;smb1	Backlight_Flag						; 上电亮屏
+	LED_SET_LOW
 
 	lda		#15
 	sta		Count_RFC							; RFC采样间隔
 
-	lda		#0
+	lda		#2
 	sta		Light_Level							; 初始亮度
 
 	ENDM

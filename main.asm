@@ -42,8 +42,6 @@ L_Clear_Ram_Loop:
 
 ;上电处理
 	rmb4	IER										; 关闭按键中断避免上电过程被打扰
-	lda		#0
-	sta		Light_Level								; 初始亮度设置为低亮
 
  	jsr		F_Test_Display							; 上电显示部分
 
@@ -64,10 +62,16 @@ Wait_RFC_MeasureOver:
 
 	REFLASH_HALF_SEC								; 上电立刻产生半S更新
 	smb1	Calendar_Flag							; 上电立刻产生日期显示更新
+	smb1	Backlight_Flag							; 打开pwm调光
 
 	smb4	IER										; 上电显示完成，重新开启按键中断
 
 ; 测试部分
+	lda		#3
+	sta		Timekeep_NumberSet
+	lda		5
+	sta		P_Temp
+	jsr		Timekeep_NumSet
 	bra		Global_Run
 
 
