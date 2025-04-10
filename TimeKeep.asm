@@ -1,10 +1,10 @@
 F_Timekeep_Run:
 	bbr0	Timekeep_Flag,Timekeep_NoRun		; 同时有计时开启标志和计时加时1S标志才会处理
-	bbs0	Timer_Flag,Timekeep_Run_Start
+	bbs6	Time_Flag,Timekeep_Run_Start
 Timekeep_NoRun
 	rts
 Timekeep_Run_Start:
-	rmb0	Timer_Flag
+	rmb6	Time_Flag
 	REFLASH_DISPLAY
 
 	lda		Sys_Status_Ordinal

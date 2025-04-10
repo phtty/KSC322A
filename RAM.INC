@@ -96,7 +96,7 @@ Time_Flag				DS		1
 ;bit3 = 1 返回初始状态加时1S标志
 ;bit4 = 1 刷新显示标志
 ;bit5 = 1 响闹阻塞标志
-;bit6 = 1 
+;bit6 = 1 计时加时1S
 
 ; 符号操作
 Symbol_Flag				DS		1

@@ -532,7 +532,7 @@ FuncOK_TimekeepMode:
 	rts
 ?LongPress_Trigger:
 	rmb0	IR_DepressJuge					; 若长按，复位松键处理标志
-	bbr0	Timekeep_Flag,?TimekeepON		; 清空只在计时未启用时生效
+	bbs0	Timekeep_Flag,?TimekeepON		; 清空只在计时未启用时生效
 	jsr		Timekeep_ClearCount
 ?TimekeepON:
 	jmp		IR_ShutDown_KeyScan				; 长按功能只执行1次

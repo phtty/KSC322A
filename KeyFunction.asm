@@ -680,6 +680,7 @@ Timekeep_Pause_Continue:
 	lda		Timekeep_Flag
 	eor		#%01
 	sta		Timekeep_Flag
+	rmb6	Time_Flag							; 清空计时模式加时标志
 
 	bbr0	Sys_Status_Ordinal,TimeDown_BakOver
 	bbs0	Timekeep_Flag,TimeDown_BakOver
@@ -698,6 +699,7 @@ Timekeep_ClearCount:
 	sta		R_Timekeep_Sec
 	sta		R_TimekeepBak_Min
 	sta		R_TimekeepBak_Sec
+	REFLASH_DISPLAY
 	rts
 
 
