@@ -1,10 +1,10 @@
 F_Timekeep_Run:
 	bbr0	Timekeep_Flag,Timekeep_NoRun		; 同时有计时开启标志和计时加时1S标志才会处理
-	bbs6	Time_Flag,Timekeep_Run_Start
+	bbs4	Time_Flag,Timekeep_Run_Start
 Timekeep_NoRun
 	rts
 Timekeep_Run_Start:
-	rmb6	Time_Flag
+	rmb4	Time_Flag
 	REFLASH_DISPLAY
 
 	lda		Sys_Status_Ordinal
@@ -50,6 +50,8 @@ TimekeepDown_Complete:
 	smb3	Timer_Switch						; 开启21Hz蜂鸣间隔定时
 	lda		#0
 	sta		Counter_21Hz
+	sta		Louding_Counter
+	smb2	Clock_Flag							; 开启响闹模式
 	bra		TimeDown_Reflash_Dis
 
 TimeDown_NoOverflow:
@@ -63,63 +65,12 @@ TimeDown_Reflash_Dis:
 	rts
 
 
-F_Timekeep_BeepHandler:
-	bbr1	Timekeep_Flag,No_Timekeep_Process	; 有倒计时完成标志位再进处理
-	jmp		Timekeep_BeepProcess
-No_Timekeep_Process:
-	lda		Beep_Serial
-	bne		BeepingNoClose						; 如果有按键或错误提示音，则不关闭蜂鸣器
-	bbs4	Key_Flag,BeepingNoClose
-	bbs6	Key_Flag,BeepingNoClose
-	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源计时开关
-	rmb3	PB
-
-	rmb3	Timer_Flag
-	rmb1	Timekeep_Flag
-BeepingNoClose:
-	lda		#0
-	sta		TimekeepLoud_Counter
-	rts
-
-
-Timekeep_BeepProcess:
-	bbs1	Time_Flag,?BeepStart				; 每响铃1S进一次
-	rts
-?BeepStart:
-	rmb1	Time_Flag
-	lda		AlarmLoud_Counter
-	cmp		#60
-	beq		CloseBeep							; 响铃60S后关闭响闹
-	lda		#4									; 响闹的序列为4，2声
-	sta		Beep_Serial
-	inc		TimekeepLoud_Counter
-	rts
-
-CloseBeep:										; 结束并关闭响闹
-	rmb1	Timekeep_Flag						; 关闭倒计时完成标志
-
-	lda		R_TimekeepBak_Min
-	sta		R_Timekeep_Min
-	lda		R_TimekeepBak_Sec
-	sta		R_Timekeep_Sec
-	REFLASH_DISPLAY
-
-	bbs4	Key_Flag,?BeepJuge_Exit				; 如果有按键提示音，则不关闭蜂鸣器
-	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源计时开关
-	rmb3	PB
-
-	rmb3	Timer_Flag
-	rmb1	Time_Flag
-?BeepJuge_Exit:
-	rts
-
-
 
 
 F_Timekeep_Display:
 	bbs3	Backlight_Flag,Timekeep_NoDisplay
 	bbs1	Timekeep_Flag,Timekeep_Over
-	bbs4	Time_Flag,Timekeep_FlashDis
+	bbs6	Time_Flag,Timekeep_FlashDis
 Timekeep_NoDisplay:
 	rts
 Timekeep_FlashDis:
