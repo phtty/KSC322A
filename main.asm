@@ -67,11 +67,6 @@ Wait_RFC_MeasureOver:
 	smb4	IER										; 上电显示完成，重新开启按键中断
 
 ; 测试部分
-	lda		#3
-	sta		Timekeep_NumberSet
-	lda		5
-	sta		P_Temp
-	jsr		Timekeep_NumSet
 	bra		Global_Run
 
 
@@ -114,9 +109,9 @@ Status_SetAlarm:
 	jsr		F_Alarm_GroupSet
 	bra		MainLoop
 Status_TimeKeep:
-	jsr		F_Timekeep_Run
+	jsr		F_Alarm_Handler							; 计时有响闹判断
+	jsr		F_Timekeep_Run							; 计时模式走时
 	jsr		F_Timekeep_Display
-	jsr		F_Timekeep_BeepHandler
 	bra		MainLoop
 
 

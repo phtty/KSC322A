@@ -680,10 +680,10 @@ Timekeep_Pause_Continue:
 	lda		Timekeep_Flag
 	eor		#%01
 	sta		Timekeep_Flag
-	rmb6	Time_Flag							; 清空计时模式加时标志
+	rmb4	Time_Flag							; 清空计时模式加时标志
 
 	bbr0	Sys_Status_Ordinal,TimeDown_BakOver
-	bbs0	Timekeep_Flag,TimeDown_BakOver
+	bbr0	Timekeep_Flag,TimeDown_BakOver
 	lda		R_Timekeep_Min						; 倒计时模式下若计时开始，会备份一次初值，等待计时完成还原
 	sta		R_TimekeepBak_Min
 	lda		R_Timekeep_Sec

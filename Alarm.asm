@@ -204,80 +204,17 @@ L_AlarmWorkDay_Clear:
 
 
 F_Alarm_Handler:
-	jsr		L_IS_AlarmTrigger					; 判断闹钟是否触发
-	bbr2	Clock_Flag,L_No_Alarm_Process		; 有响闹标志位再进处理
-	jsr		L_Alarm_Process
-	rts
-L_No_Alarm_Process:
-	lda		Beep_Serial
-	bne		L_LoudingNoClose					; 如果有按键或错误提示音，则不关闭蜂鸣器
-	bbs4	Key_Flag,L_LoudingNoClose
-	bbs6	Key_Flag,L_LoudingNoClose
-	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源计时开关
-	rmb3	PB
-
-	rmb3	Timer_Flag
-	rmb1	Time_Flag
-L_LoudingNoClose:
-	lda		#0
-	sta		AlarmLoud_Counter
-	rts
-
-
-L_IS_AlarmTrigger:
+	bbr5	Time_Flag,Alarm_NoJuge				; 每S只进1次闹钟判断
+	rmb5	Time_Flag
 	lda		Alarm_Switch
 	bne		Alarm_Juge_Start					; 没有任何闹钟开启则不会判断闹钟是否触发
-	rmb1	Clock_Flag
+Alarm_NoJuge:
+	;rmb1	Clock_Flag
 	rts
 Alarm_Juge_Start:
-	bbs2	Clock_Flag,L_AlarmTrigger_Exit		; 如此时仍在响闹，则不判断闹钟是否触发
-	jsr		Is_Alarm_Trigger					; 判断两组闹钟触发
-	bbs1	Clock_Flag,L_AlarmTrigger
-	rts
-L_AlarmTrigger:
-	jsr		F_RFC_Abort							; 避免响闹时电压不稳终止RFC采样
-	smb1	Time_Flag
-	smb3	Timer_Switch						; 开启21Hz蜂鸣间隔定时
-	lda		#0
-	sta		Counter_21Hz
-	smb2	Clock_Flag							; 开启响闹模式
-	rmb1	Clock_Flag							; 关闭闹钟触发标志，避免重复进闹钟触发
-L_AlarmTrigger_Exit:
-	rts
-
-L_CloseLoud:									; 结束并关闭响闹
-	rmb1	RFC_Flag							; 取消禁用RFC采样
-	lda		#0
-	sta		Triggered_AlarmGroup
-	sta		AlarmLoud_Counter
-	rmb1	Clock_Flag							; 关闭闹钟触发标志
-	rmb2	Clock_Flag							; 关闭响闹模式
-	rmb5	Clock_Flag
-
-	bbs4	Key_Flag,L_LoudingJuge_Exit			; 如果有按键提示音，则不关闭蜂鸣器
-	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源计时开关
-	rmb3	PB
-
-	rmb3	Timer_Flag
-	rmb1	Time_Flag
-L_LoudingJuge_Exit:
-	rts
+	jmp		Is_Alarm_Trigger					; 判断两组闹钟触发
 
 
-
-
-L_Alarm_Process:
-	bbs1	Time_Flag,L_BeepStart				; 每响铃1S进一次
-	rts
-L_BeepStart:
-	rmb1	Time_Flag
-	lda		AlarmLoud_Counter
-	cmp		#60
-	beq		L_CloseLoud							; 响铃60S后关闭响闹
-	lda		#8									; 响闹的序列为8，4声
-	sta		Beep_Serial
-	inc		AlarmLoud_Counter
-	rts
 
 
 ; 任意一组闹钟设定值的时、分符合当前时间，就设置闹钟触发标志位,并同步至触发闹钟
@@ -297,14 +234,14 @@ L_Alarm2_NoMatch:
 	cmp		R_Alarm1_Hour
 	beq		L_Alarm1_HourMatch
 L_Alarm1_NoMatch:
-	rmb1	Clock_Flag							; 所有闹钟均未触发
+	;rmb1	Clock_Flag							; 所有闹钟均未触发
 	rts
 
 L_Alarm1_HourMatch:
 	lda		R_Time_Min
 	cmp		R_Alarm1_Min
 	beq		L_Alarm1_MinMatch
-	rmb1	Clock_Flag							; 闹钟1分钟不匹配，闹钟未触发
+	;rmb1	Clock_Flag							; 闹钟1分钟不匹配，闹钟未触发
 	rts
 
 L_Alarm2_HourMatch:
@@ -318,7 +255,7 @@ L_Alarm1_MinMatch:
 	lda		R_Time_Sec
 	cmp		#00
 	beq		Alarm1_SecMatch
-	rmb1	Clock_Flag							; 若秒不匹配，则闹钟不触发并退出
+	;rmb1	Clock_Flag							; 若秒不匹配，则闹钟不触发并退出
 	rts
 Alarm1_SecMatch:
 	lda		Alarm1_WorkDay
@@ -348,7 +285,7 @@ L_Alarm2_MinMatch:
 	lda		R_Time_Sec
 	cmp		#00
 	beq		Alarm2_SecMatch
-	rmb1	Clock_Flag							; 若秒不匹配，则闹钟不触发并退出
+	;rmb1	Clock_Flag							; 若秒不匹配，则闹钟不触发并退出
 	rts
 Alarm2_SecMatch:
 	lda		Alarm2_WorkDay
@@ -377,14 +314,27 @@ Alarm2_SecMatch:
 
 
 
-; 确定闹钟触发后的处理，打断当前的响闹
+; 确定闹钟触发后的处理
 L_Alarm_Match_Handle:
-	jsr		L_CloseLoud
-	bbs5	Time_Flag,Alarm_Blocked
+	;jsr		L_CloseLoud
 	smb1	Clock_Flag							; 同时满足小时和分钟的匹配，设置闹钟触发
-	jsr		WakeUp_Event						; 闹钟触发若此时关屏则会唤醒
-Alarm_Blocked:
-	smb5	Time_Flag							; 闹钟触发后，阻塞下一次1S内的闹钟触发
+	smb2	Clock_Flag							; 开启响闹模式
+
+	jsr		F_RFC_Abort							; 避免响闹时电压不稳终止RFC采样
+	smb1	Time_Flag
+	smb3	Timer_Switch						; 开启21Hz蜂鸣间隔定时
+	lda		#0
+	sta		Counter_21Hz
+	sta		Louding_Counter
+
+	bbs4	Sys_Status_Flag,?Timekeep_Mode
+	lda		#%00001
+	sta		Sys_Status_Flag
+	lda		#0
+	sta		Sys_Status_Ordinal					; 唤醒熄屏后会回到时间显示模式
+?Timekeep_Mode:
+	REFLASH_DISPLAY
+	smb1	Backlight_Flag
 	rts
 
 

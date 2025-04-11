@@ -222,10 +222,10 @@ L_Universal_TriggerHandle:
 	lda		#0
 	sta		Return_Counter						; 重置返回时显模式计时
 
-	bbr1	Backlight_Flag,WakeUp_Event			; 若此时熄屏，按键会导致亮屏
+	bbr1	Backlight_Flag,KeyWakeUp_Event			; 若此时熄屏，按键会导致亮屏
 	jsr		L_KeyBeep_ON
 	rts
-WakeUp_Event:
+KeyWakeUp_Event:
 	bbs4	Sys_Status_Flag,?Timekeep_Mode
 	lda		#%00001
 	sta		Sys_Status_Flag

@@ -379,17 +379,12 @@ IR_ShutDown_KeyScan:
 	jmp		Interval_Timeout
 
 
-L_ShutDown_Loud:							; 按键关闭闹钟
-	bbs2	Clock_Flag,?No_AlarmLouding
-	bbs1	Timekeep_Flag,?No_TimekeepLouding
+L_ShutDown_Loud:							; 按键关闭响闹
+	bbs2	Clock_Flag,?No_Louding
+	bbs1	Timekeep_Flag,?No_Louding
 	rts
-?No_AlarmLouding:
+?No_Louding:
 	jsr		L_CloseLoud						; 打断响闹
-	pla
-	pla
-	jmp		IR_ShutDown_KeyScan
-?No_TimekeepLouding:
-	jsr		CloseBeep						; 打断响闹
 	pla
 	pla
 	jmp		IR_ShutDown_KeyScan
@@ -406,7 +401,16 @@ L_IR_Func_OnOff:
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 ?WakeUp_Screen:
-	jsr		WakeUp_Event
+	bbs4	Sys_Status_Flag,?Timekeep_Mode
+	lda		#%00001
+	sta		Sys_Status_Flag
+	lda		#0
+	sta		Sys_Status_Ordinal				; 唤醒熄屏后会回到时间显示模式
+?Timekeep_Mode:
+	REFLASH_DISPLAY
+	smb1	Backlight_Flag
+	pla
+	pla
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 

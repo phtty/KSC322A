@@ -46,7 +46,7 @@ Count_RFC				DS		1
 QuickAdd_Counter		DS		1
 Return_Counter			DS		1
 Return_MaxTime			DS		1
-AlarmLoud_Counter		DS		1
+Louding_Counter			DS		1
 TimekeepLoud_Counter	DS		1
 IR_Counter				DS		1
 Code_Counter			DS		1
@@ -91,12 +91,12 @@ Timer_Switch			DS		1
 
 Time_Flag				DS		1
 ;bit0 = 1 走时加时1S标志
-;bit1 = 1 响铃加时1S标志
+;bit1 = 1 响闹加时1S标志
 ;bit2 = 1 RFC采样加时1S标志
 ;bit3 = 1 返回初始状态加时1S标志
-;bit4 = 1 刷新显示标志
-;bit5 = 1 响闹阻塞标志
-;bit6 = 1 计时加时1S
+;bit4 = 1 计时加时1S
+;bit5 = 1 闹钟判断标志
+;bit6 = 1 刷新显示标志
 
 ; 符号操作
 Symbol_Flag				DS		1
@@ -213,7 +213,10 @@ Alarm2_WorkDay			DS		1	; 闹钟2的工作日
 ; 1: 1~6
 ; 2: 1~7
 
+; 触发闹钟组
 Triggered_AlarmGroup	DS		1
+;bit0 = 1 闹钟1触发
+;bit1 = 1 闹钟2触发
 
 RFC_ChannelCount		DS		1
 

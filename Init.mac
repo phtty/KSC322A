@@ -2,22 +2,26 @@ F_Init_SystemRam	MACRO						; 系统内存初始化
 	lda		#00001B
 	sta		Sys_Status_Flag
 
-	lda		#12
+	lda		#00
 	sta		R_Time_Hour
 	lda		#00
 	sta		R_Time_Min
-	lda		#55
+	lda		#00
 	sta		R_Time_Sec
 
-	lda		#12
+	lda		#06
 	sta		R_Alarm1_Hour
-	lda		#01
+	lda		#00
 	sta		R_Alarm1_Min
 
-	lda		#12
+	lda		#13
 	sta		R_Alarm2_Hour
-	;lda		#00
-	;sta		R_Alarm2_Min
+	lda		#00
+	sta		R_Alarm2_Min
+
+	lda		#2
+	sta		Alarm1_WorkDay
+	sta		Alarm2_WorkDay
 
 	lda		#01
 	sta		R_Date_Day
@@ -36,6 +40,7 @@ F_Init_SystemRam	MACRO						; 系统内存初始化
 
 	lda		#2
 	sta		Light_Level							; 初始亮度
+
 
 	ENDM
 

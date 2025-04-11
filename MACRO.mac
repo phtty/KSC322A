@@ -94,7 +94,7 @@ REFLASH_HALF_SEC	MACRO
 	ENDM
 
 REFLASH_DISPLAY		MACRO
-	smb4	Time_Flag				; 启用一次用5020更新
+	smb6	Time_Flag				; 启用一次用5020更新
 	ENDM
 
 

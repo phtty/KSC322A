@@ -186,10 +186,10 @@ L_2Bit_Digit8:
 
 
 F_Flash_Display:
-	bbs4	Time_Flag,L_Flash_Start
+	bbs6	Time_Flag,L_Flash_Start
 	rts
 L_Flash_Start:
-	rmb4	Time_Flag
+	rmb6	Time_Flag
 	jsr		L_Send_DRAM
 	rts
 
