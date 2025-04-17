@@ -267,7 +267,7 @@ OK_DepressFunc:
 
 TimeUp_DepressFunc:
 	rmb1	IR_DepressJuge
-	bbs0	Sys_Status_Ordinal,?TimeUp_NoFunc_TimeUp
+	bbr0	Sys_Status_Ordinal,?TimeUp_NoFunc_TimeUp
 	bbs0	Timekeep_Flag,?TimeUp_NoFunc_TimeUp
 	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
 	jmp		SwitchState_TimeUpMode			; 倒计时模式未启用计时状态下，切换到正计时模式
@@ -334,6 +334,7 @@ IR_KeyHandle:
 	jsr		L_ShutDown_Loud					; 若此时正在响闹，则关闭闹钟，但不执行按键功能
 	lda		#0
 	sta		Return_Counter					; 清空返回初始状态计数
+	rmb4	Clock_Flag						; 关闭灭屏计时
 
 	cpx		#0
 	beq		No_KeyOnOff
@@ -398,15 +399,15 @@ L_IR_Func_OnOff:
 	bbr1	Backlight_Flag,?WakeUp_Screen
 	rmb1	Backlight_Flag
 	LED_SET_HIGH
-	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
-
-?WakeUp_Screen:
-	bbs4	Sys_Status_Flag,?Timekeep_Mode
 	lda		#%00001
 	sta		Sys_Status_Flag
 	lda		#0
 	sta		Sys_Status_Ordinal				; 唤醒熄屏后会回到时间显示模式
-?Timekeep_Mode:
+	rmb1	RFC_Flag						; 重新启用RFC采样
+	jsr		Return_CD_Mode					; 返回时显
+	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
+
+?WakeUp_Screen:
 	REFLASH_DISPLAY
 	smb1	Backlight_Flag
 	pla
@@ -512,7 +513,14 @@ L_IR_Func_LightStaue:
 	jsr		L_KeyBeep_ON					; 按键音
 
 	jsr		LightLevel_Change
-	nop										; 亮度等级显示
+	lda		Sys_Status_Flag
+	and		#%01100
+	beq		?No_SetMode
+	lda		#%00001
+	sta		Sys_Status_Flag
+	lda		#0
+	sta		Sys_Status_Ordinal				; 在设置模式下切亮度会回到时间显示
+?No_SetMode:
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 
 
@@ -572,11 +580,11 @@ L_IR_Func_TimerUp:
 	jsr		Return_CD_Mode					; 设置模式会返回时显
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 Func_TimeUp_Effect:
-	bbs4	Sys_Status_Flag,TimeKeep_UpMode
+	bbs4	Sys_Status_Flag,?TimeKeep_Mode
 	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
 	jsr		SwitchState_TimeUpMode			; 切换到正计时模式
 	jmp		IR_ShutDown_KeyScan				; 按键功能只执行1次
-TimeKeep_UpMode:
+?TimeKeep_Mode:
 	bbs0	Timekeep_Flag,TimeKeep_UpMode_Exit
 	bbs5	IR_Flag,?LongPress_Trigger
 	smb1	IR_DepressJuge
@@ -585,9 +593,6 @@ TimeKeep_UpMode:
 	rmb1	IR_DepressJuge
 	rmb1	RFC_Flag						; 重新启用RFC采样
 	jsr		Return_CD_Mode					; 返回时显
-	jsr		F_Display_Date
-	jsr		F_Display_Week
-	jsr		F_Display_Temper
 TimeKeep_UpMode_Exit:
 	jmp		IR_ShutDown_KeyScan				; 长按功能只执行1次
 
@@ -605,11 +610,11 @@ L_IR_Func_TimerDown:
 	jsr		Return_CD_Mode					; 设置模式会返回时显
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 Func_TimeDown_Effect:
-	bbs4	Sys_Status_Flag,TimeKeep_DownMode
+	bbs4	Sys_Status_Flag,?TimeKeep_Mode
 	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
 	jsr		SwitchState_TimeDownMode		; 切换到倒计时模式
 	jmp		IR_ShutDown_KeyScan				; 按键功能只执行1次
-TimeKeep_DownMode:
+?TimeKeep_Mode:
 	bbs0	Timekeep_Flag,TimeKeep_DownMode_Exit
 	bbs5	IR_Flag,?LongPress_Trigger
 	smb2	IR_DepressJuge
@@ -618,9 +623,6 @@ TimeKeep_DownMode:
 	rmb2	IR_DepressJuge
 	rmb1	RFC_Flag						; 重新启用RFC采样
 	jsr		Return_CD_Mode					; 返回时显
-	jsr		F_Display_Date
-	jsr		F_Display_Week
-	jsr		F_Display_Temper
 TimeKeep_DownMode_Exit:
 	jmp		IR_ShutDown_KeyScan				; 长按功能只执行1次
 

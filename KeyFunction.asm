@@ -3,6 +3,8 @@ SwitchState_AlarmDis:
 	lda		#5
 	sta		Return_MaxTime						; 设置模式，5S返回时显
 	smb3	Clock_Flag							; 置位返回初始状态标志
+	jsr		F_ClrAL1
+	jsr		F_ClrAL2							; 闹显模式切换时关闭所有AL点显示
 
 	lda		Sys_Status_Flag
 	cmp		#00010B
@@ -10,16 +12,20 @@ SwitchState_AlarmDis:
 	lda		#00010B
 	sta		Sys_Status_Flag						; 当前状态非闹显则切换至闹显
 	lda		#0
-	sta		Sys_Status_Ordinal					; 清零子模式序号和闹钟组
-	sta		Alarm_Group
+	sta		Sys_Status_Ordinal					; 清零子模式序号
+	lda		#1
+	sta		Alarm_Group							; 设置操作的闹钟组为1
 	rts
 L_Change_Group_AD:
 	inc		Alarm_Group							; 当前状态为闹显，则递增闹钟组
 	lda		Alarm_Group
-	cmp		#2
-	bcc		L_Group_Exit_AD
+	cmp		#3
+	bcc		L_Group_Exit_AD	
+	lda		#%00001
+	sta		Sys_Status_Flag
 	lda		#0
-	sta		Alarm_Group							; 闹钟组大于1时，回到时显模式
+	sta		Sys_Status_Ordinal
+	sta		Alarm_Group							; 操作闹组大于2时回到时显，并清空闹组值
 L_Group_Exit_AD:
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	REFLASH_HALF_SEC
@@ -49,10 +55,17 @@ L_Change_Ordinal_CS:
 	bcc		L_Ordinal_Exit_CS
 Return_CD_Mode:
 	lda		#0
-	sta		Sys_Status_Ordinal					; 子模式序号大于5时，则回到时显模式，并清空序号
-	lda		#0001B
+	sta		Sys_Status_Ordinal					; 子模式序号大于5时，则回到时显模式，并清空序号和闹组
+	sta		Alarm_Group
+	lda		#%00001
 	sta		Sys_Status_Flag
 	rmb3	Clock_Flag							; 复位返回初始状态标志
+	smb2	Symbol_Flag							; 产生一次ALM点常显刷新
+	jsr		F_DisCol
+	jsr		F_Display_Time
+	jsr		F_Display_Date
+	jsr		F_Display_Week
+	jsr		F_Display_Temper
 L_Ordinal_Exit_CS:
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	REFLASH_HALF_SEC
@@ -68,23 +81,13 @@ SwitchState_AlarmSet:
 	smb3	Clock_Flag							; 置位返回初始状态标志
 
 	lda		Sys_Status_Flag
-	cmp		#1000B
+	cmp		#%01000
 	beq		L_Change_Ordinal_AS					; 判断当前状态是否已经是闹钟设置
-	bbr1	Sys_Status_Flag,No_AlarmDis2Set
-	lda		#1000B
-	sta		Sys_Status_Flag						; 当前状态非闹设则切换至闹设
-	lda		Sys_Status_Ordinal					; 若当前处于闹显状态
-	clc
-	rol
-	clc
-	adc		Sys_Status_Ordinal					; 则对当前显示的闹组设置
-	sta		Sys_Status_Ordinal
-	bra		L_Ordinal_Exit_AS
-No_AlarmDis2Set:
+	lda		#%01000
+	sta		Sys_Status_Flag						; 当前状态若为闹钟显示则切换为闹钟设置
 	lda		#0
-	sta		Sys_Status_Ordinal					; 清零子模式序号
-	lda		#1000B
-	sta		Sys_Status_Flag						; 当前状态非闹设则切换至闹设
+	sta		Sys_Status_Ordinal
+	jsr		AlarmDot_Const						; 闹设模式切入时更新一次AL点常显
 	bra		L_Ordinal_Exit_AS
 L_Change_Ordinal_AS:
 	inc		Sys_Status_Ordinal					; 当前状态为闹设，则递增子模式序号
@@ -92,7 +95,8 @@ L_Change_Ordinal_AS:
 	cmp		#4
 	bcc		L_Ordinal_Exit_AS
 	lda		#0
-	sta		Sys_Status_Ordinal					; 子模式序号大于3时，则回到时显模式，并清空序号
+	sta		Sys_Status_Ordinal					; 子模式序号大于3时，则回到时显模式，并清空序号和操作的闹组
+	sta		Alarm_Group
 	lda		#0001B
 	sta		Sys_Status_Flag
 L_Ordinal_Exit_AS:
@@ -229,6 +233,7 @@ No_CS_MonthAdd:
 ; 闹设模式增数
 AddNum_AS:
 	ldx		Alarm_Group
+	dex
 	lda		Sys_Status_Ordinal
 	bne		No_AlarmSwitch_AddCHG
 	lda		#1
@@ -277,6 +282,7 @@ No_CS_MonthSub:
 ; 闹设模式减数
 SubNum_AS:
 	ldx		Alarm_Group
+	dex
 	lda		Sys_Status_Ordinal
 	cmp		#0
 	bne		No_AlarmSwitch_SubCHG
@@ -387,6 +393,7 @@ DateYear_Add_Exit:
 	jsr		L_DayOverflow_Juge					; 若当前日期超过当前月份允许的最大值，则日期变为当前允许最大日
 	jsr		F_Is_Leap_Year
 	jsr		L_DisDate_Year
+	jsr		F_Display_Date						; 更新月日和星期
 	jsr		F_Display_Week
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
@@ -405,6 +412,7 @@ DateYear_Sub_Exit:
 	jsr		L_DayOverflow_Juge					; 若当前日期超过当前月份允许的最大值，则日期变为当前允许最大日
 	jsr		F_Is_Leap_Year
 	jsr		L_DisDate_Year
+	jsr		F_Display_Date						; 更新月日和星期
 	jsr		F_Display_Week
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
@@ -497,9 +505,6 @@ DateDay_Sub_Exit:
 L_Alarm_Switch:
 	eor		Alarm_Switch
 	sta		Alarm_Switch
-	;smb1	Timer_Flag
-	;rmb0	Timer_Flag
-	;jsr		F_Alarm_SwitchStatue				; 刷新一次闹钟开关显示
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -519,9 +524,6 @@ AlarmMin_AddOverflow:
 	lda		#0
 	sta		Alarm_MinAddr,x
 AlarmMin_Add_Exit:
-	;smb1	Timer_Flag
-	;rmb0	Timer_Flag
-	;jsr		F_AlarmMin_Set
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -539,9 +541,6 @@ AlarmMin_SubOverflow:
 	lda		#59
 	sta		Alarm_MinAddr,x
 AlarmMin_Sub_Exit:
-	;smb1	Timer_Flag
-	;rmb0	Timer_Flag
-	;jsr		F_AlarmMin_Set
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -561,9 +560,6 @@ AlarmHour_AddOverflow:
 	lda		#0
 	sta		Alarm_HourAddr,x
 AlarmHour_Add_Exit:
-	;smb1	Timer_Flag
-	;rmb0	Timer_Flag
-	;jsr		F_AlarmHour_Set
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts
@@ -581,9 +577,6 @@ AlarmHour_SubOverflow:
 	lda		#23
 	sta		Alarm_HourAddr,x
 AlarmHour_Sub_Exit:
-	;smb1	Timer_Flag
-	;rmb0	Timer_Flag
-	;jsr		F_AlarmHour_Set
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY								; 按键操作结束刷新显示
 	rts

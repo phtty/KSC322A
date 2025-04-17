@@ -56,22 +56,27 @@ Clock_SetDis_Start:
 No_TMSwitch_Display:
 	cmp		#1
 	bne		No_HourSet_Display
+	jsr		L_DisTime_Min
 	jmp		F_DisHour_Set
 No_HourSet_Display:
 	cmp		#2
 	bne		No_MinSet_Display
+	jsr		L_DisTime_Hour
 	jmp		F_DisMin_Set
 No_MinSet_Display:
 	cmp		#3
 	bne		No_YearSet_Display
 	jsr		F_ClrCol								; 日期不显示COL和PM
 	jsr		F_ClrPM
+	jsr		F_Display_Date
 	jmp		F_DisYear_Set
 No_YearSet_Display:
 	cmp		#4
 	bne		No_MonthSet_Display
 	jsr		F_ClrCol								; 日期不显示COL和PM
 	jsr		F_ClrPM
+	jsr		L_DisDate_Year
+	jsr		L_DisDate_Day
 	jmp		F_DisMonth_Set
 No_MonthSet_Display:
 	jsr		F_ClrCol								; 日期不显示COL和PM

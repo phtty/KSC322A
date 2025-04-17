@@ -52,7 +52,7 @@ IR_Counter				DS		1
 Code_Counter			DS		1
 Repeat_Counter			DS		1
 Interval_Counter		DS		1
-;Counter_Bak				DS		1
+CloseLED_Counter		DS		1
 ;Counter_Bak2			DS		1
 
 Calendar_Flag			DS		1
@@ -65,7 +65,7 @@ Clock_Flag				DS		1
 ;bit1 = 1 闹钟触发
 ;bit2 = 1 响闹模式
 ;bit3 = 1 返回初始状态计时开启
-;bit4 = 1 
+;bit4 = 1 灭屏时的闹钟触发
 ;bit5 = 1 
 ;bit6 = 1 
 
@@ -97,16 +97,18 @@ Time_Flag				DS		1
 ;bit4 = 1 计时加时1S
 ;bit5 = 1 闹钟判断标志
 ;bit6 = 1 刷新显示标志
+;bit7 = 1 灭屏计时加时1S
 
 ; 符号操作
 Symbol_Flag				DS		1
-;bit0 = 1 ALM点半S标志
-;bit1 = 1 ALM点1S标志
+;bit0 = 1 ALM点1S标志
+;bit1 = 1 ALM点半S标志
+;bit2 = 1 ALM点常显刷新
 
 Sys_Status_Flag			DS		1
 ;bit0 = 1 时钟显示
 ;bit1 = 1 闹钟显示
-;bit2 = 1 设置时钟
+;bit2 = 1 时钟设置
 ;bit3 = 1 闹钟设置
 ;bit4 = 1 计时模式
 
@@ -196,8 +198,9 @@ Auto_LightLevel			DS		1	; 当前自动亮度等级
 ; 2: 高亮
 
 Alarm_Group				DS		1	; 闹钟组
-; 0：当前操作闹钟组1
-; 1：当前操作闹钟组2
+; 0: 当前未操作闹钟组
+; 1：当前操作闹钟组1
+; 2：当前操作闹钟组2
 
 Alarm_Switch			DS		1	; 各个闹钟开关
 ;bit0 = 1 闹钟1开启

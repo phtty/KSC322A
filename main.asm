@@ -70,22 +70,22 @@ Wait_RFC_MeasureOver:
 	bra		Global_Run
 
 
-; 状态机
 MainLoop:
 	jsr		F_PowerSavingMode						; 只有纽扣电池的省电模式
 Global_Run:											; 全局生效的功能处理
 	jsr		F_Flash_Display							; 通过标志位决定是否刷新显示
-	jsr		F_KeyHandler
+	;jsr		F_KeyHandler
 	jsr		IR_Receive_Loop							; 红外接收
 	jsr		F_BeepManage
 	jsr		F_Time_Run								; 走时
-	jsr		F_SymbolRegulate
 	jsr		F_Date_Display							; 日期和星期更新，日期设置模式下由日期设置更新接管
 	jsr		F_RFC_MeasureManage
 	jsr		F_AutoLL_Get
 	jsr		F_Display_LightLevel
+	jsr		F_CloseLED_Count						; 灭屏响闹完成后的灭屏计时
 	jsr		F_ReturnToInitial						; 定时返回时显模式
 
+; 状态机
 Status_Juge:
 	bbs0	Sys_Status_Flag,Status_DisTime
 	bbs1	Sys_Status_Flag,Status_DisAlarm
@@ -97,16 +97,19 @@ Status_Juge:
 Status_DisTime:
 	jsr		F_Time_Display
 	jsr		F_Alarm_Handler							; 显示状态有响闹判断
+	jsr		F_ALDot_Regulate
 	bra		MainLoop
 Status_DisAlarm:
 	jsr		F_Alarm_GroupDis
 	jsr		F_Alarm_Handler							; 显示状态有响闹判断
+	jsr		F_ALDot_Regulate
 	bra		MainLoop
 Status_SetClock:
 	jsr		F_Clock_Set
 	bra		MainLoop
 Status_SetAlarm:
 	jsr		F_Alarm_GroupSet
+	jsr		F_ALDot_Regulate
 	bra		MainLoop
 Status_TimeKeep:
 	jsr		F_Alarm_Handler							; 计时有响闹判断

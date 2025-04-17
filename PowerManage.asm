@@ -27,8 +27,8 @@ Enter_LowPower:
 	rmb4	Key_Flag
 	rmb6	Key_Flag
 	rmb1	RFC_Flag
-	rmb7	Timer_Switch						; 关闭蜂鸣器时钟源
-	rmb3	Timer_Switch						; 关闭21Hz计时
+	rmb7	Timer_Switch							; 关闭蜂鸣器时钟源
+	rmb3	Timer_Switch							; 关闭21Hz计时
 	lda		#0
 	sta		Counter_21Hz
 	lda		#00
@@ -93,4 +93,25 @@ GetLL_Start:
 High_Light_Mode:
 	lda		#2
 	sta		Auto_LightLevel
+	rts
+
+
+F_CloseLED_Count:
+	bbr4	Clock_Flag,CloseLEDCount_Exit
+	bbs7	Time_Flag,CloseLEDCount
+	rts
+CloseLEDCount:
+	dec		CloseLED_Counter
+	lda		CloseLED_Counter
+	bne		CloseLEDCount_Exit
+	rmb1	Backlight_Flag
+	rmb1	RFC_Flag						; 重新启用RFC采样
+	rmb4	Clock_Flag
+	LED_SET_HIGH
+	lda		#%00001
+	sta		Sys_Status_Flag
+	lda		#0
+	sta		Sys_Status_Ordinal				; 30S计时到了之后熄屏
+	jsr		Return_CD_Mode					; 返回时显
+CloseLEDCount_Exit:
 	rts

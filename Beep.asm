@@ -78,9 +78,9 @@ L_Beep_NoClose:
 	bbs1	Timekeep_Flag,?TimekeepLoud_Over
 	rts
 ?AlarmLoud_Over:
+	rmb1	Clock_Flag							; 复位闹钟触发标志
 	lda		#0
 	sta		Triggered_AlarmGroup
-	rmb1	Clock_Flag							; 复位闹钟触发标志
 	rts
 ?TimekeepLoud_Over:
 	lda		R_TimekeepBak_Min

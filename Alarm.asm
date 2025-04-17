@@ -1,6 +1,5 @@
 F_Alarm_GroupDis:
 	bbs3	Backlight_Flag,F_Alarm_GroupNoDis
-	jsr		L_AlarmDot_Blink					; 闪烁AL点指示当前闹钟组
 	jmp		F_Display_Alarm
 F_Alarm_GroupNoDis:
 	rts
@@ -10,7 +9,6 @@ F_Alarm_GroupNoDis:
 
 F_Alarm_GroupSet:
 	bbs3	Backlight_Flag,Alarm_GroupSet_NoDis
-	jsr		L_AlarmDot_Blink
 
 	lda		Sys_Status_Ordinal
 	clc
@@ -32,40 +30,6 @@ AlarmGroupHandle_Table:
 
 
 
-L_AlarmDot_Blink:
-	lda		Alarm_Group
-	eor		#1
-	sta		P_Temp
-	tax											; 取非当前闹组
-	lda		#1
-	jsr		L_A_LeftShift_XBit					; 把1左移相应位计算出当前组闹钟开关的位号
-	and		Alarm_Switch						; 和闹钟开关状态相与得出该位号是开还是关
-	clc
-	rol
-	clc
-	adc		P_Temp								; 非当前闹组加上非当前闹组状态*2即为要跳转的函数
-	;jsr		L_Control_ALDot
-
-	bbs1	Symbol_Flag,L_AlarmDot_Out
-	rts
-L_AlarmDot_Out:									; 闪烁当前闹组
-	rmb1	Symbol_Flag
-	bbs0	Symbol_Flag,No_ALDot_Display
-	lda		Alarm_Group
-	clc
-	adc		#2
-	jsr		L_Control_ALDot						; 当前组AL点半秒亮
-	REFLASH_DISPLAY								; 置位刷新显示标志位
-	rts
-No_ALDot_Display:
-	rmb0	Symbol_Flag
-	lda		Alarm_Group
-	jsr		L_Control_ALDot						; 当前组AL点1秒灭
-	REFLASH_DISPLAY								; 置位刷新显示标志位
-	rts
-
-
-
 
 ; 闹钟开关显示
 F_Alarm_SwitchStatue:
@@ -75,8 +39,7 @@ F_Alarm_SwitchStatue:
 	rmb1	Timer_Flag
 	bbs0	Timer_Flag,AlarmSW_UnDisplay
 	ldx		Alarm_Group
-	lda		#1
-	jsr		L_A_LeftShift_XBit					; 把1左移相应位计算出当前组闹钟开关的位号
+	lda		Bit_Num_Table,x
 	and		Alarm_Switch						; 和闹钟开关状态相与得出该位号是开还是关
 
 	beq		ALSwitch_DisOff
@@ -97,25 +60,25 @@ ALSwitch_DisOff:
 	lda		#9
 	ldx		#led_d1
 	jsr		L_Dis_7Bit_WordDot
-	bra		ALSwitch_DisNum
+
+ALSwitch_DisNum:
+	lda		#4
+	ldx		#led_d2
+	jsr		L_Dis_7Bit_WordDot					; 显示A
+
+	lda		Alarm_Group
+	ldx		#led_d3
+	jsr		L_Dis_7Bit_DigitDot					; 显示闹钟序号
+	bra		AlarmSW_Blink_Exit
 
 AlarmSW_UnDisplay:
 	rmb0	Timer_Flag
 	jsr		F_UnDisplay_D0_1
-	jmp		F_UnDisplay_D2_3
+	jsr		F_UnDisplay_D2_3
 
-ALSwitch_DisNum:								; 显示闹钟序号
-	lda		#4
-	ldx		#led_d2
-	jsr		L_Dis_7Bit_WordDot
-
-	lda		Alarm_Group							; +1为实际闹钟序号
-	clc
-	adc		#1
-	ldx		#led_d3
-	jsr		L_Dis_7Bit_DigitDot
+AlarmSW_Blink_Exit:
+	REFLASH_DISPLAY
 	rts
-
 
 
 
@@ -173,7 +136,7 @@ F_AlarmWorkDay_Set:
 L_AlarmWorkDay_Set:
 	rmb1	Timer_Flag
 
-	jsr		F_DisCol
+	jsr		F_ClrCol
 
 	bbs0	Timer_Flag,L_AlarmWorkDay_Clear
 	ldx		#led_d1
@@ -186,7 +149,8 @@ L_AlarmWorkDay_Set:
 	jsr		F_DisSymbol
 
 	ldx		Alarm_Group
-	lda		Alarm_WorkDayAddr,x					; 显示对应闹组的工作日
+	dex											; Alarm_Group-1为闹组实际对应的工作日
+	lda		Alarm_WorkDayAddr,x
 	clc
 	adc		#5
 	ldx		#led_d3
@@ -203,19 +167,76 @@ L_AlarmWorkDay_Clear:
 
 
 
+AlarmDot_Blink:
+	bbs1	Symbol_Flag,AL_Blink_Start
+	rts
+AL_Blink_Start:
+	rmb1	Symbol_Flag
+	bbs0	Symbol_Flag,AL_Blink_NoDis
+
+	ldx		Alarm_Group
+	lda		Bit_Num_Table,x
+	ora		Triggered_AlarmGroup
+	sta		P_Temp+1
+	bbr0	P_Temp+1,AL1_NoDisplay				; 操作闹组和触发闹组或操作，再判断bit0和bit1决定亮AL1、AL2
+	jsr		F_DisAL1
+AL1_NoDisplay:
+	bbr1	P_Temp+1,AL2_NoDisplay
+	jsr		F_DisAL2
+AL2_NoDisplay:
+	rts
+
+AL_Blink_NoDis:
+	rmb0	Symbol_Flag
+	ldx		Alarm_Group
+	lda		Bit_Num_Table,x
+	ora		Triggered_AlarmGroup
+	sta		P_Temp+1
+	bbr0	P_Temp+1,AL1_NoClear					; 操作闹组和触发闹组或操作，再判断bit0和bit1决定灭AL1、AL2
+	jsr		F_ClrAL1
+AL1_NoClear:
+	bbr1	P_Temp+1,AL2_NoClear
+	jsr		F_ClrAL2
+AL2_NoClear:
+	rts
+
+
+AlarmDot_Const:
+	bbs2	Symbol_Flag,AL_Const_Start
+	rts
+AL_Const_Start:
+	rmb2	Symbol_Flag
+	ldx		Alarm_Group
+	lda		Bit_Num_Table,x
+	ora		Triggered_AlarmGroup
+	sta		P_Temp+1
+	bbs0	P_Temp+1,AL2_Const_Juge				; 判断AL1有无操作闹组或响闹，有则不进行常显
+	bbr0	Alarm_Switch,AL1_Const_Clear		; 根据Alarm Swtich亮灭AL1
+	jsr		F_DisAL1
+	bra		AL2_Const_Juge
+AL1_Const_Clear:
+	jsr		F_ClrAL1
+
+AL2_Const_Juge:
+	bbs1	P_Temp+1,AL_Const_Exit				; 判断AL2有无操作闹组或响闹，有则不进行常显
+	bbr1	Alarm_Switch,AL2_Const_Clear		; 根据Alarm Swtich亮灭AL2
+	jsr		F_DisAL2
+	bra		AL_Const_Exit
+AL2_Const_Clear:
+	jsr		F_ClrAL2
+AL_Const_Exit:
+	rts
+
+
+
+
 F_Alarm_Handler:
 	bbr5	Time_Flag,Alarm_NoJuge				; 每S只进1次闹钟判断
 	rmb5	Time_Flag
 	lda		Alarm_Switch
-	bne		Alarm_Juge_Start					; 没有任何闹钟开启则不会判断闹钟是否触发
+	bne		Is_Alarm_Trigger					; 没有任何闹钟开启则不会判断闹钟是否触发
 Alarm_NoJuge:
-	;rmb1	Clock_Flag
 	rts
-Alarm_Juge_Start:
-	jmp		Is_Alarm_Trigger					; 判断两组闹钟触发
-
-
-
 
 ; 任意一组闹钟设定值的时、分符合当前时间，就设置闹钟触发标志位,并同步至触发闹钟
 ; 同时判断此闹钟是否处于工作日
@@ -234,15 +255,13 @@ L_Alarm2_NoMatch:
 	cmp		R_Alarm1_Hour
 	beq		L_Alarm1_HourMatch
 L_Alarm1_NoMatch:
-	;rmb1	Clock_Flag							; 所有闹钟均未触发
 	rts
 
 L_Alarm1_HourMatch:
 	lda		R_Time_Min
 	cmp		R_Alarm1_Min
-	beq		L_Alarm1_MinMatch
-	;rmb1	Clock_Flag							; 闹钟1分钟不匹配，闹钟未触发
-	rts
+	beq		L_Alarm1_MinMatch						
+	rts											; 闹钟1分钟不匹配，闹钟未触发
 
 L_Alarm2_HourMatch:
 	lda		R_Time_Min
@@ -255,8 +274,7 @@ L_Alarm1_MinMatch:
 	lda		R_Time_Sec
 	cmp		#00
 	beq		Alarm1_SecMatch
-	;rmb1	Clock_Flag							; 若秒不匹配，则闹钟不触发并退出
-	rts
+	rts											; 若秒不匹配，则闹钟不触发并退出
 Alarm1_SecMatch:
 	lda		Alarm1_WorkDay
 	cmp		#2
@@ -284,8 +302,7 @@ Alarm1_SecMatch:
 L_Alarm2_MinMatch:
 	lda		R_Time_Sec
 	cmp		#00
-	beq		Alarm2_SecMatch
-	;rmb1	Clock_Flag							; 若秒不匹配，则闹钟不触发并退出
+	beq		Alarm2_SecMatch						; 若秒不匹配，则闹钟不触发并退出
 	rts
 Alarm2_SecMatch:
 	lda		Alarm2_WorkDay
@@ -316,9 +333,9 @@ Alarm2_SecMatch:
 
 ; 确定闹钟触发后的处理
 L_Alarm_Match_Handle:
-	;jsr		L_CloseLoud
 	smb1	Clock_Flag							; 同时满足小时和分钟的匹配，设置闹钟触发
 	smb2	Clock_Flag							; 开启响闹模式
+	rmb1	Timekeep_Flag						; 打断倒计时完成触发
 
 	jsr		F_RFC_Abort							; 避免响闹时电压不稳终止RFC采样
 	smb1	Time_Flag
@@ -334,7 +351,14 @@ L_Alarm_Match_Handle:
 	sta		Sys_Status_Ordinal					; 唤醒熄屏后会回到时间显示模式
 ?Timekeep_Mode:
 	REFLASH_DISPLAY
+
+	bbs1	Backlight_Flag,No_CloseScreen_Alarm
 	smb1	Backlight_Flag
+	smb4	Clock_Flag							; 灭屏触发的响闹，需要计时30S后关屏
+	rmb7	Time_Flag
+	lda		#90
+	sta		CloseLED_Counter
+No_CloseScreen_Alarm:
 	rts
 
 
@@ -368,3 +392,15 @@ Shift_Start:
 Shift_End:
 	lda		P_Temp
 	rts
+
+
+Bit_Num_Table:
+	db		00H
+	db		01H
+	db		02H
+	db		04H
+	db		08H
+	db		10H
+	db		20H
+	db		40H
+	db		80H

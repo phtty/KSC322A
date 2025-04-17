@@ -14,9 +14,9 @@ L_Day_Juge:
 	lda		#1
 	sta		R_Date_Day								; 日进位发生
 	lda		R_Date_Month
-	cmp		#12										; 若是月份到已经计到12
+	cmp		#12
 	beq		L_Year_Add								; 月份进位
-	inc		R_Date_Month							; 月份正常加
+	inc		R_Date_Month
 	rts
 
 L_Day_Add:
@@ -96,11 +96,11 @@ F_Date_Display:
 	lda		Sys_Status_Ordinal
 	cmp		#4
 	bne		?No_MonthSet
-	rts												; 在日期设置模式下，不通过此函数更新日期显示
+	rts
 ?No_MonthSet:
 	cmp		#5
 	bne		?Juge_SysStatus_Over
-	rts
+	rts												; 在日期设置模式下，不通过此函数更新日期显示
 ?Juge_SysStatus_Over:
 
 	bbs1	Calendar_Flag,L_DateFlash_Start
@@ -120,8 +120,8 @@ F_DisYear_Set:
 L_Blink_Year:
 	rmb1	Timer_Flag								; 清半S标志
 
-	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Year		; 有快加时常亮
-	bbs5	IR_Flag,L_KeyTrigger_NoBlink_Year		; 有快加时常亮
+	bbs2	Key_Flag,L_KeyTrigger_NoBlink_Year		; 有按键快加时常亮
+	bbs5	IR_Flag,L_KeyTrigger_NoBlink_Year		; 有红外快加时常亮
 	bbs0	Timer_Flag,L_Year_Clear					; 有1S标志时灭
 L_KeyTrigger_NoBlink_Year:
 	jsr		L_DisDate_Year

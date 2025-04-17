@@ -29,15 +29,22 @@ Timekeep_Run_Start:
 
 TimekeepDown_Mode:
 	sed
-	lda		R_Timekeep_Sec						; 倒计时减S
-	bne		TimeDown_NoOverflow					; 秒不为0则一定没倒计时结束
-
-	lda		R_Timekeep_Min
-	beq		TimekeepDown_Complete				; 分秒都为0时则为计时结束
+	lda		R_Timekeep_Sec
+	beq		Timekeep_SecOverflowJuge			; 分借位发生
 	sec
 	sbc		#1
-	sta		R_Timekeep_Min						; 分不为0则重置秒，减分
-
+	sta		R_Timekeep_Sec
+	bne		TimekeepDown_NoComplete
+	lda		R_Timekeep_Min
+	beq		TimekeepDown_Complete				; 计时完成
+TimekeepDown_NoComplete:
+	bra		TimeDown_Reflash_Dis
+Timekeep_SecOverflowJuge:
+	lda		R_Timekeep_Min
+	beq		TimekeepDown_Complete				; 计时完成
+	sec
+	sbc		#1
+	sta		R_Timekeep_Min						; 分不为0则减分，重置秒
 	lda		#$59
 	sta		R_Timekeep_Sec
 	bra		TimeDown_Reflash_Dis
@@ -52,13 +59,7 @@ TimekeepDown_Complete:
 	sta		Counter_21Hz
 	sta		Louding_Counter
 	smb2	Clock_Flag							; 开启响闹模式
-	bra		TimeDown_Reflash_Dis
-
-TimeDown_NoOverflow:
-	sec
-	sbc		#1
-	sta		R_Timekeep_Sec
-	cld
+	rmb1	Clock_Flag							; 打断闹钟触发
 TimeDown_Reflash_Dis:
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY

@@ -68,13 +68,9 @@ F_Display_Alarm:								; 调用显示函数显示当前闹钟组
 	rts
 
 L_DisAlarm_Min:
-	lda		Alarm_Group							; 判断要显示两组闹钟的哪一个
-	bne		No_Alarm1Min_Display
-	lda		R_Alarm1_Min
-	bra		AlarmMin_Display_Start
-No_Alarm1Min_Display:
-	lda		R_Alarm2_Min
-AlarmMin_Display_Start:
+	ldx		Alarm_Group
+	dex
+	lda		Alarm_MinAddr,x
 	sta		R_Alarm_Min
 	lda		R_Alarm_Min
 
@@ -91,14 +87,9 @@ AlarmMin_Display_Start:
 	rts
 
 L_DisAlarm_Hour:								; 显示闹钟小时
-	lda		Alarm_Group							; 判断要显示三组闹钟的哪一个
-	cmp		#0
-	bne		No_Alarm1Hour_Display
-	lda		R_Alarm1_Hour
-	bra		AlarmHour_Display_Start
-No_Alarm1Hour_Display:
-	lda		R_Alarm2_Hour
-AlarmHour_Display_Start:
+	ldx		Alarm_Group
+	dex
+	lda		Alarm_HourAddr,x
 	sta		R_Alarm_Hour
 	bbr0	Clock_Flag,L_24hMode_Alarm
 
@@ -341,74 +332,11 @@ Display_FahrenheitDegree:
 
 
 
-F_SymbolRegulate:								; 显示常亮点
-	jsr		L_ALMDot_Blink
-	jsr		F_AlarmSW_Display
-	rts
-
-
-; 响闹时闪ALM点
-L_ALMDot_Blink:
-	bbr2	Clock_Flag,L_SymbolDis_Exit			; 如果非响闹状态，则不进此子程序
-	bbs0	Symbol_Flag,L_SymbolDis
-L_SymbolDis_Exit:
-	rts
-L_SymbolDis:
-	rmb0	Symbol_Flag							; ALM点半S标志
-	bbs1	Symbol_Flag,L_ALM_Dot_Clr
-L_ALM_Dot_Dis:
-	bbs0	Triggered_AlarmGroup,Group1_Bright
-	bbs1	Triggered_AlarmGroup,Group2_Bright
-Group1_Bright:
-	jsr		F_DisAL1
-	REFLASH_DISPLAY
-	rts
-Group2_Bright:
-	jsr		F_DisAL2
-	REFLASH_DISPLAY
-	rts
-	
-L_ALM_Dot_Clr:
-	rmb1	Symbol_Flag							; ALM点1S标志
-	bbs0	Triggered_AlarmGroup,Group1_Extinguish
-	bbs1	Triggered_AlarmGroup,Group2_Extinguish
-Group1_Extinguish:
-	jsr		F_ClrAL1
-	REFLASH_DISPLAY
-	rts
-Group2_Extinguish:
-	jsr		F_ClrAL2
-	REFLASH_DISPLAY
-	rts
-
-
-
-; 非闹钟显示状态下，显示开启的闹钟
-F_AlarmSW_Display:
-	bbs2	Clock_Flag,F_AlarmSW_Exit			; 响闹时，被闪点子程序接管
-	lda		Sys_Status_Flag
-	cmp		#0010B
-	bne		Alarm1_Switch						; 在闹钟显示模式下，不控制闹钟组的点显示
-F_AlarmSW_Exit:
-	rts
-
-Alarm1_Switch:
-	lda		Alarm_Switch
-	and		#001B
-	beq		Alarm1_Switch_Off
-	jsr		F_DisAL1
-	bra		Alarm2_Switch
-Alarm1_Switch_Off:
-	jsr		F_ClrAL1
-
-Alarm2_Switch:
-	lda		Alarm_Switch
-	and		#010B
-	beq		Alarm2_Switch_Off
-	jsr		F_DisAL2
-	rts
-Alarm2_Switch_Off:
-	jsr		F_ClrAL2
+F_ALDot_Regulate:								; AL符号的闪烁和常显管理
+	jsr		AlarmDot_Blink
+	bbs1	Sys_Status_Flag,ALDot_Regulate_Exit
+	jsr		AlarmDot_Const
+ALDot_Regulate_Exit:
 	rts
 
 
@@ -551,24 +479,6 @@ F_ClrAL2:
 	ldx		#led_AL2
 	jsr		F_ClrSymbol
 	rts
-
-
-; 根据A值跳转不同的AL点操作函数
-L_Control_ALDot:
-	clc
-	rol
-	tax
-	lda		AlarmDot_Table+1,x
-	pha
-	lda		AlarmDot_Table,x
-	pha
-	rts
-
-AlarmDot_Table:
-	dw		F_ClrAL1-1
-	dw		F_ClrAL2-1
-	dw		F_DisAL1-1
-	dw		F_DisAL2-1
 
 
 

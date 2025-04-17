@@ -221,8 +221,9 @@ L_Key_ShutdownLoud:
 L_Universal_TriggerHandle:
 	lda		#0
 	sta		Return_Counter						; 重置返回时显模式计时
+	rmb4	Clock_Flag							; 关闭灭屏计时
 
-	bbr1	Backlight_Flag,KeyWakeUp_Event			; 若此时熄屏，按键会导致亮屏
+	bbr1	Backlight_Flag,KeyWakeUp_Event		; 若此时熄屏，按键会导致亮屏
 	jsr		L_KeyBeep_ON
 	rts
 KeyWakeUp_Event:

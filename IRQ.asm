@@ -115,6 +115,7 @@ I_LcdIRQ_Handler:
 	sta		Counter_2Hz
 	smb1	Timer_Flag						; 2Hz标志
 	smb1	Symbol_Flag
+	smb2	Symbol_Flag
 	REFLASH_DISPLAY
 
 L_1Hz_Juge:
@@ -128,7 +129,7 @@ L_1Hz_Juge:
 	smb0	Symbol_Flag
 	smb4	Backlight_Flag
 
-	lda		#$3f
+	lda		#$bf
 	ora		Time_Flag
 	sta		Time_Flag						; 走时加时、响铃加时、返回加时、RFC采样加时、闹钟判断、计时模式加时
 LcdIRQ_Exit:
