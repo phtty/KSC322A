@@ -49,7 +49,6 @@ Timekeep_SecOverflowJuge:
 	sta		R_Timekeep_Sec
 	bra		TimeDown_Reflash_Dis
 TimekeepDown_Complete:
-	cld
 	rmb0	Timekeep_Flag
 	smb1	Timekeep_Flag						; 出现溢出则置位倒计时完成标志并复位计时开启
 
@@ -61,6 +60,7 @@ TimekeepDown_Complete:
 	smb2	Clock_Flag							; 开启响闹模式
 	rmb1	Clock_Flag							; 打断闹钟触发
 TimeDown_Reflash_Dis:
+	cld
 	REFLASH_HALF_SEC
 	REFLASH_DISPLAY
 	rts

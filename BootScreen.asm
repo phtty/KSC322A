@@ -1,4 +1,4 @@
-F_Test_Display:
+F_BootScreen:
 	jsr		F_FillScreen						; 上电全显2S
 	jsr		L_Send_DRAM
 	lda		#2
@@ -14,10 +14,6 @@ Loop_FillScr:
 	jsr		F_Display_Time
 	jsr		F_DisCol
 	jsr		L_Send_DRAM
+	rmb6	Time_Flag
 
-;	bbr6	PB,StartUp_WakeUp
-;	smb0	Backlight_Flag						; 有5V供电则置位DC标志
-;StartUp_WakeUp:
-;	smb3	Key_Flag							; 上电先给一个唤醒事件，免得上电不显示
-;	rmb4	PD
 	rts

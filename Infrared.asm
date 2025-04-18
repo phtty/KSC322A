@@ -331,10 +331,10 @@ Compare_DCode_Loop:
 
 ; 跳转至对应功能函数
 IR_KeyHandle:
-	jsr		L_ShutDown_Loud					; 若此时正在响闹，则关闭闹钟，但不执行按键功能
 	lda		#0
 	sta		Return_Counter					; 清空返回初始状态计数
 	rmb4	Clock_Flag						; 关闭灭屏计时
+	jsr		L_ShutDown_Loud					; 若此时正在响闹，则关闭闹钟，但不执行按键功能
 
 	cpx		#0
 	beq		No_KeyOnOff
@@ -399,11 +399,10 @@ L_IR_Func_OnOff:
 	bbr1	Backlight_Flag,?WakeUp_Screen
 	rmb1	Backlight_Flag
 	LED_SET_HIGH
-	lda		#%00001
-	sta		Sys_Status_Flag
-	lda		#0
-	sta		Sys_Status_Ordinal				; 唤醒熄屏后会回到时间显示模式
 	rmb1	RFC_Flag						; 重新启用RFC采样
+	lda		#0
+	sta		Timekeep_Flag
+	sta		Timekeep_NumberSet
 	jsr		Return_CD_Mode					; 返回时显
 	jmp		IR_ShutDown_KeyScan				; 只执行1次按键功能
 

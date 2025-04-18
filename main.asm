@@ -36,14 +36,15 @@ L_Clear_Ram_Loop:
 	sta		MF0										; 为内部RC振荡器提供校准数据	
 
 	jsr		F_Init_Sys								; 初始化外设
+	jsr		L_Send_DRAM
 
 	cli												; 开总中断
-	jsr		L_Send_DRAM
+	
 
 ;上电处理
 	rmb4	IER										; 关闭按键中断避免上电过程被打扰
 
- 	jsr		F_Test_Display							; 上电显示部分
+ 	jsr		F_BootScreen							; 上电显示部分
 
 	jsr		F_RFC_MeasureStart						; 上电温度测量
 Wait_RFC_MeasureOver:
@@ -53,7 +54,7 @@ Wait_RFC_MeasureOver:
 	lda		#$02
 	sta		Beep_Serial
 	smb4	Key_Flag
-	smb3	Timer_Switch							; 上电响铃1声
+	smb3	Timer_Switch							; 上电响铃1声(使用按键音)
 
 	lda		#%00001
 	sta		Sys_Status_Flag
@@ -74,7 +75,7 @@ MainLoop:
 	jsr		F_PowerSavingMode						; 只有纽扣电池的省电模式
 Global_Run:											; 全局生效的功能处理
 	jsr		F_Flash_Display							; 通过标志位决定是否刷新显示
-	;jsr		F_KeyHandler
+	jsr		F_KeyHandler
 	jsr		IR_Receive_Loop							; 红外接收
 	jsr		F_BeepManage
 	jsr		F_Time_Run								; 走时
@@ -218,7 +219,7 @@ L_EndIrq:
 .include	RFCTable.asm
 .include	TemperHandle.asm
 .include	PowerManage.asm
-.include	TestDisplay.asm
+.include	BootScreen.asm
 .include	infrared.asm
 .include	IR_Table.asm
 .include	TimeKeep.asm

@@ -101,6 +101,7 @@ F_CloseLED_Count:
 	bbs7	Time_Flag,CloseLEDCount
 	rts
 CloseLEDCount:
+	rmb7	Time_Flag
 	dec		CloseLED_Counter
 	lda		CloseLED_Counter
 	bne		CloseLEDCount_Exit

@@ -138,6 +138,6 @@ LcdIRQ_Exit:
 
 
 LightLevel_Table:
-	dw		0
-	dw		3
-	dw		7
+	db		0
+	db		3
+	db		7
