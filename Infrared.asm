@@ -32,7 +32,6 @@ IR_Turn2Phase1:
 	sta		IR_ReceivePhase					; 收码进入阶段1
 	smb3	IR_Flag							; IR开始计数
 
-	;smb0	IER
 	lda		#0
 	sta		IR_Counter						; 初始化变量
 	lda		#32
@@ -157,7 +156,6 @@ IR_Receive_Phase_5:
 	bbs0	IR_Flag,?IR_Level_Juge
 	rts
 ?IR_Level_Juge:
-	;rmb0	IER
 	lda		#0
 	sta		IR_ReceivePhase
 	lda		#8
@@ -180,7 +178,6 @@ L_Clr_CodeBuffer:
 	sta		Repeat_Counter					; 每次收码失败会断掉连续接收重复码，清空重复码个数计数
 	rmb4	IR_Flag							; 关闭重复码间隔超时计时和计数开关
 	rmb4	Timer_Switch
-	;rmb0	IER
 	rts
 
 
@@ -255,7 +252,7 @@ OK_DepressFunc:
 	rmb0	IR_DepressJuge
 	lda		Sys_Status_Ordinal
 	bne		?TimeDown_Mode
-	jmp		Timekeep_Pause_Continue			; 正计时模式直接启停计时
+	jmp		Timekeep_Pause_Continue			; 正计时模式启停计时
 ?TimeDown_Mode:
 	lda		R_Timekeep_Min
 	bne		?TimeDown_FuncOK
@@ -269,7 +266,11 @@ TimeUp_DepressFunc:
 	rmb1	IR_DepressJuge
 	bbr0	Sys_Status_Ordinal,?TimeUp_NoFunc_TimeUp
 	bbs0	Timekeep_Flag,?TimeUp_NoFunc_TimeUp
-	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
+	;jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
+	lda		R_Timekeep_Min
+	bne		?TimeUp_NoFunc_TimeUp			; 计时未清零前不能切换倒计时
+	lda		R_Timekeep_Sec
+	bne		?TimeUp_NoFunc_TimeUp
 	jmp		SwitchState_TimeUpMode			; 倒计时模式未启用计时状态下，切换到正计时模式
 ?TimeUp_NoFunc_TimeUp:
 	rts
@@ -278,8 +279,12 @@ TimeDown_DepressFunc:
 	rmb2	IR_DepressJuge
 	bbs0	Sys_Status_Ordinal,?TimeDown_NoFunc_TimeDown
 	bbs0	Timekeep_Flag,?TimeDown_NoFunc_TimeDown
-	jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
-	jmp		SwitchState_TimeDownMode		; 正计时模式未启用计时状态下，切换到倒计时模式
+	;jsr		F_RFC_Abort						; 终止RFC采样并禁用显示
+	lda		R_Timekeep_Min
+	bne		?TimeDown_NoFunc_TimeDown		; 设置了倒计时后不能切换正计时
+	lda		R_Timekeep_Sec
+	bne		?TimeDown_NoFunc_TimeDown
+	jmp		SwitchState_TimeDownMode		; 倒计时模式未启用计时状态下，切换到正计时模式
 ?TimeDown_NoFunc_TimeDown:
 	rts
 
@@ -418,6 +423,7 @@ L_IR_Func_OnOff:
 
 L_IR_Func_12_24:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,IR_12_24_Exit	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%01100
@@ -435,6 +441,7 @@ IR_12_24_Exit:
 
 L_IR_Func_Alarm:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,IR_Alarm_Exit	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%01100
@@ -454,6 +461,8 @@ L_IR_Func_Inc:
 	bbs5	IR_Flag,?LongPress_BeepOFF
 	jsr		L_KeyBeep_ON					; 只有第一下有按键音
 ?LongPress_BeepOFF:
+	bbs3	Backlight_Flag,?No_AS_Mode		; 亮度显示时无功能
+
 	lda		Sys_Status_Flag
 	and		#%10011
 	beq		?SetMode
@@ -472,6 +481,8 @@ L_IR_Func_Inc:
 
 L_IR_Func_Set:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,IR_Set_Exit		; 亮度显示时无功能
+
 	lda		Sys_Status_Flag
 	and		#%00101							; 时钟模式切换到设置模式
 	beq		?No_CS_Mode
@@ -492,6 +503,8 @@ L_IR_Func_Dec:
 	bbs5	IR_Flag,?LongPress_BeepOFF
 	jsr		L_KeyBeep_ON					; 只有第一下有按键音
 ?LongPress_BeepOFF:
+	bbs3	Backlight_Flag,?No_AS_Mode		; 亮度显示时无功能
+
 	lda		Sys_Status_Flag
 	and		#%10011
 	beq		?SetMode
@@ -529,6 +542,7 @@ L_IR_Func_OK:
 	bbs5	IR_Flag,?LongPress_BeepOFF
 	jsr		L_KeyBeep_ON					; 只有一声按键音
 ?LongPress_BeepOFF:
+	bbs3	Backlight_Flag,?No_SetMode		; 亮度显示时无功能
 
 	bbs4	Sys_Status_Flag,FuncOK_TimekeepMode
 	lda		Sys_Status_Flag
@@ -553,6 +567,8 @@ FuncOK_TimekeepMode:
 
 L_IR_Func_CF:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,IR_CF_Exit		; 亮度显示时无功能
+
 	bbs4	Sys_Status_Flag,IR_CF_Exit		; 该按键计时模式无功能
 	lda		Sys_Status_Flag
 	and		#%01100
@@ -572,6 +588,7 @@ L_IR_Func_TimerUp:
 	bbs5	IR_Flag,?LongPress_BeepOFF
 	jsr		L_KeyBeep_ON					; 只有第一下有按键音
 ?LongPress_BeepOFF:
+	bbs3	Backlight_Flag,TimeKeep_UpMode_Exit		; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -602,6 +619,7 @@ L_IR_Func_TimerDown:
 	bbs5	IR_Flag,?LongPress_BeepOFF
 	jsr		L_KeyBeep_ON					; 只有第一下有按键音
 ?LongPress_BeepOFF:
+	bbs3	Backlight_Flag,TimeKeep_DownMode_Exit	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -630,6 +648,7 @@ TimeKeep_DownMode_Exit:
 
 L_IR_Func_0:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -650,6 +669,7 @@ L_IR_Func_0:
 
 L_IR_Func_1:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -670,6 +690,7 @@ L_IR_Func_1:
 
 L_IR_Func_2:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 	
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -690,6 +711,7 @@ L_IR_Func_2:
 
 L_IR_Func_3:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -710,6 +732,7 @@ L_IR_Func_3:
 
 L_IR_Func_4:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -730,6 +753,7 @@ L_IR_Func_4:
 
 L_IR_Func_5:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -750,6 +774,7 @@ L_IR_Func_5:
 
 L_IR_Func_6:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -770,6 +795,7 @@ L_IR_Func_6:
 
 L_IR_Func_7:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -790,6 +816,7 @@ L_IR_Func_7:
 
 L_IR_Func_8:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011
@@ -810,6 +837,7 @@ L_IR_Func_8:
 
 L_IR_Func_9:
 	jsr		L_KeyBeep_ON					; 按键音
+	bbs3	Backlight_Flag,?Display_Mode	; 亮度显示时无功能
 
 	lda		Sys_Status_Flag
 	and		#%10011

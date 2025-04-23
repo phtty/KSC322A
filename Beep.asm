@@ -74,15 +74,15 @@ L_Beep_NoClose:
 	rmb1	Time_Flag
 	rmb2	Clock_Flag							; 复位响闹模式和响闹加时1S
 
-	bbs1	Clock_Flag,?AlarmLoud_Over
-	bbs1	Timekeep_Flag,?TimekeepLoud_Over
+	bbs1	Clock_Flag,AlarmLoud_Over
+	bbs1	Timekeep_Flag,TimekeepLoud_Over
 	rts
-?AlarmLoud_Over:
+AlarmLoud_Over:
 	rmb1	Clock_Flag							; 复位闹钟触发标志
 	lda		#0
 	sta		Triggered_AlarmGroup
-	rts
-?TimekeepLoud_Over:
+	;rts
+TimekeepLoud_Over:
 	lda		R_TimekeepBak_Min
 	sta		R_Timekeep_Min
 	lda		R_TimekeepBak_Sec

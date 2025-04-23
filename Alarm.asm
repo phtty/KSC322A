@@ -192,7 +192,7 @@ AL_Blink_NoDis:
 	lda		Bit_Num_Table,x
 	ora		Triggered_AlarmGroup
 	sta		P_Temp+1
-	bbr0	P_Temp+1,AL1_NoClear					; 操作闹组和触发闹组或操作，再判断bit0和bit1决定灭AL1、AL2
+	bbr0	P_Temp+1,AL1_NoClear				; 操作闹组和触发闹组或操作，再判断bit0和bit1决定灭AL1、AL2
 	jsr		F_ClrAL1
 AL1_NoClear:
 	bbr1	P_Temp+1,AL2_NoClear
@@ -285,18 +285,17 @@ Alarm1_SecMatch:
 	beq		L_Alarm1_NoMatch					; 单休周天不响闹
 	bra		?No_WorkDay_Juge
 ?No_WorkDay_1_6:
-	lda		R_Date_Week
+	lda		R_Date_Week 
 	beq		L_Alarm1_NoMatch					; 双休周天不响闹
 	cmp		#6
 	beq		L_Alarm1_NoMatch					; 双休周六也不响闹
 ?No_WorkDay_Juge:
+	bbs1	Triggered_AlarmGroup,AL2_Triggered	; 闹钟2已经触发的情况下不再重复执行响闹初始化
 	jsr		L_Alarm_Match_Handle
-	lda		#001B
+AL2_Triggered:
+	lda		Triggered_AlarmGroup
+	ora		#001B
 	sta		Triggered_AlarmGroup
-	lda		R_Alarm1_Hour						; 将符合条件的闹钟的时、分同步至触发闹钟,方便后续的判断逻辑
-	sta		R_Alarm_Hour
-	lda		R_Alarm1_Min
-	sta		R_Alarm_Min
 	rts
 
 L_Alarm2_MinMatch:
@@ -322,11 +321,7 @@ Alarm2_SecMatch:
 	jsr		L_Alarm_Match_Handle
 	lda		#010B
 	sta		Triggered_AlarmGroup
-	lda		R_Alarm2_Hour						; 将符合条件的闹钟的时、分同步至触发闹钟,方便后续的判断逻辑
-	sta		R_Alarm_Hour
-	lda		R_Alarm2_Min
-	sta		R_Alarm_Min
-	rts
+	bra		L_Alarm2_NoMatch					; 判断完AL2继续判断AL1
 
 
 
