@@ -22,9 +22,11 @@ L_NoBeep_Serial_Mode:
 	smb3	PB
 
 	lda		Beep_Serial
-	bne		No_KeyBeep_Over	
-	bbs4	Key_Flag,No_KeyBeep_Over
-	bbs6	Key_Flag,No_KeyBeep_Over			; 存在错误音或按键音，则需要在响铃结束后关闭21Hz计时
+	bne		No_KeyBeep_Over						; 错误提示音响两声，若蜂鸣序列不为0则不关闭
+	bbs4	Key_Flag,KeyBeep_Over
+	bbs6	Key_Flag,KeyBeep_Over				; 存在错误音或按键音，则需要在响铃结束后关闭21Hz计时
+	bra		No_KeyBeep_Over
+KeyBeep_Over:
 	rmb4	Key_Flag
 	rmb6	Key_Flag
 	rmb1	RFC_Flag							; 按键音的响铃完毕重新取消禁用RFC采样
